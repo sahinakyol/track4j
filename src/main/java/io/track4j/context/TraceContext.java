@@ -5,12 +5,15 @@ import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.UUID;
 
-public class TraceContext {
+public final class TraceContext {
     private static final String TRACE_ID_HEADER = "X-Trace-ID";
     private static final String SPAN_ID_HEADER = "X-Span-ID";
     private static final ThreadLocal<String> traceId = new ThreadLocal<>();
     private static final ThreadLocal<String> spanId = new ThreadLocal<>();
     private static final SecureRandom random = new SecureRandom();
+
+    private TraceContext() {
+    }
 
     public static String getTraceId() {
         return traceId.get();

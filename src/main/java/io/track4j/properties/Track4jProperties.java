@@ -23,11 +23,11 @@ public class Track4jProperties {
     private String[] excludePatterns = {};
 
     private StorageType storageType = StorageType.SQL;
-    private String customRepositoryClass;
-    private String connectionUrl;
-    private String connectionUsername;
-    private String connectionPassword;
-    private String driverClassName;
+    private String customRepositoryClass = "";
+    private String connectionUrl = "";
+    private String connectionUsername = "";
+    private String connectionPassword = "";
+    private String driverClassName = "";
 
     private int maximumPoolSize = 5;
     private int minimumIdle = 1;
@@ -78,10 +78,7 @@ public class Track4jProperties {
             if (rawPatterns != null && !rawPatterns.isBlank()) {
                 String[] patterns = rawPatterns.split("\\s*,\\s*");
                 setExcludePatterns(new String[patterns.length]);
-                for (int i = 0; i < patterns.length; i++) {
-                    this.excludePatterns[i] = patterns[i];
-                }
-
+                System.arraycopy(patterns, 0, this.excludePatterns, 0, patterns.length);
             }
         } catch (IOException ex) {
             ex.printStackTrace();
@@ -94,181 +91,88 @@ public class Track4jProperties {
         return this.connectionUrl;
     }
 
-    public void setConnectionUrl(String connectionUrl) {
-        this.connectionUrl = connectionUrl;
-    }
-
     public String getConnectionUsername() {
         return this.connectionUsername;
-    }
-
-    public void setConnectionUsername(String connectionUsername) {
-        this.connectionUsername = connectionUsername;
     }
 
     public String getConnectionPassword() {
         return this.connectionPassword;
     }
 
-    public void setConnectionPassword(String connectionPassword) {
-        this.connectionPassword = connectionPassword;
-    }
-
     public String getDriverClassName() {
         return this.driverClassName;
-    }
-
-    public void setDriverClassName(String driverClassName) {
-        this.driverClassName = driverClassName;
     }
 
     public int getMaximumPoolSize() {
         return maximumPoolSize;
     }
 
-    public void setMaximumPoolSize(int maximumPoolSize) {
-        this.maximumPoolSize = maximumPoolSize;
-    }
-
     public int getMinimumIdle() {
         return minimumIdle;
-    }
-
-    public void setMinimumIdle(int minimumIdle) {
-        this.minimumIdle = minimumIdle;
     }
 
     public int getConnectionTimeout() {
         return connectionTimeout;
     }
 
-    public void setConnectionTimeout(int connectionTimeout) {
-        this.connectionTimeout = connectionTimeout;
-    }
-
     public int getIdleTimeout() {
         return idleTimeout;
-    }
-
-    public void setIdleTimeout(int idleTimeout) {
-        this.idleTimeout = idleTimeout;
     }
 
     public int getMaxLifetime() {
         return maxLifetime;
     }
 
-    public void setMaxLifetime(int maxLifetime) {
-        this.maxLifetime = maxLifetime;
-    }
-
     public boolean isAutoCommit() {
         return autoCommit;
-    }
-
-    public void setAutoCommit(boolean autoCommit) {
-        this.autoCommit = autoCommit;
     }
 
     public String getPoolName() {
         return poolName;
     }
 
-    public void setPoolName(String poolName) {
-        this.poolName = poolName;
-    }
-
-    public enum StorageType {
-        SQL,
-        CUSTOM
-    }
-
     public boolean isEnabled() {
         return enabled;
-    }
-
-    public void setEnabled(boolean enabled) {
-        this.enabled = enabled;
     }
 
     public boolean isIncomingRequestTrackingEnabled() {
         return incomingRequestTrackingEnabled;
     }
 
-    public void setIncomingRequestTrackingEnabled(boolean enabled) {
-        this.incomingRequestTrackingEnabled = enabled;
-    }
-
     public boolean isExternalRequestTrackingEnabled() {
         return externalRequestTrackingEnabled;
-    }
-
-    public void setExternalRequestTrackingEnabled(boolean enabled) {
-        this.externalRequestTrackingEnabled = enabled;
     }
 
     public boolean isInternalCallTrackingEnabled() {
         return internalCallTrackingEnabled;
     }
 
-    public void setInternalCallTrackingEnabled(boolean enabled) {
-        this.internalCallTrackingEnabled = enabled;
-    }
-
     public int getFilterOrder() {
         return filterOrder;
-    }
-
-    public void setFilterOrder(int filterOrder) {
-        this.filterOrder = filterOrder;
     }
 
     public int getBatchSize() {
         return batchSize;
     }
 
-    public void setBatchSize(int batchSize) {
-        this.batchSize = batchSize;
-    }
-
     public long getFlushInterval() {
         return flushInterval;
-    }
-
-    public void setFlushInterval(long flushInterval) {
-        this.flushInterval = flushInterval;
     }
 
     public boolean isIncludeRequestBody() {
         return includeRequestBody;
     }
 
-    public void setIncludeRequestBody(boolean includeRequestBody) {
-        this.includeRequestBody = includeRequestBody;
-    }
-
     public boolean isIncludeResponseBody() {
         return includeResponseBody;
-    }
-
-    public void setIncludeResponseBody(boolean includeResponseBody) {
-        this.includeResponseBody = includeResponseBody;
     }
 
     public boolean isIncludeHeaders() {
         return includeHeaders;
     }
 
-    public void setIncludeHeaders(boolean includeHeaders) {
-        this.includeHeaders = includeHeaders;
-    }
-
     public int getMaxBodySize() {
         return maxBodySize;
-    }
-
-    public void setMaxBodySize(int maxBodySize) {
-        this.maxBodySize = maxBodySize;
     }
 
     public String[] getExcludePatterns() {
@@ -283,15 +187,7 @@ public class Track4jProperties {
         return storageType;
     }
 
-    public void setStorageType(StorageType storageType) {
-        this.storageType = storageType;
-    }
-
     public String getCustomRepositoryClass() {
         return customRepositoryClass;
-    }
-
-    public void setCustomRepositoryClass(String customRepositoryClass) {
-        this.customRepositoryClass = customRepositoryClass;
     }
 }

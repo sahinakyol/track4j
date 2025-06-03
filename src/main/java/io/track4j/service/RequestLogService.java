@@ -9,7 +9,12 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class RequestLogService {
 
@@ -78,8 +83,9 @@ public class RequestLogService {
                 worker.submit(this::rescueProcessBuffer);
             }
 
-        } catch (Exception e) {
-            logger.error("Track4j: Failed to add log to buffer", e);
+        } catch (InterruptedException e) {
+            logger.error("Track4j: Failed to add log to buffer with error : {}", e.getMessage());
+            Thread.currentThread().interrupt();
         }
     }
 

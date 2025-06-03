@@ -3,8 +3,6 @@ package io.track4j.interceptor;
 import io.track4j.context.TraceContext;
 import io.track4j.dto.RequestLogDto;
 import io.track4j.service.RequestLogService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.client.ClientHttpRequestExecution;
@@ -18,8 +16,6 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 
 public class RestTemplateTrackingInterceptor implements ClientHttpRequestInterceptor {
-
-    private static final Logger logger = LoggerFactory.getLogger(RestTemplateTrackingInterceptor.class);
 
     private final RequestLogService requestLogService;
 
@@ -52,37 +48,25 @@ public class RestTemplateTrackingInterceptor implements ClientHttpRequestInterce
         logDto.setRequestHeaders(request.getHeaders().toString());
         logDto.setRequestBody(new String(body, StandardCharsets.UTF_8));
 
-        boolean success = true;
-        String errorMessage = null;
-        BufferingClientHttpResponse response = null;
-
-        try {
-            response = new BufferingClientHttpResponse(execution.execute(request, body));
+        try (BufferingClientHttpResponse response = new BufferingClientHttpResponse(execution.execute(request, body))) {
+            logDto.completeWithResponse(
+                    response.getStatusCode().value(),
+                    response.getHeaders().toString(),
+                    response.getBodyAsString(),
+                    response.getStatusCode().is2xxSuccessful(),
+                    null
+            );
             return response;
         } catch (Exception e) {
-            success = false;
-            errorMessage = e.getMessage();
-            logger.error("Track4j: InternalServiceTrackingAspect.executeWithTracking, trackingResult failed to get", errorMessage);
+            logDto.completeWithResponse(
+                    HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                    null,
+                    null,
+                    false,
+                    e.getMessage()
+            );
             return null;
         } finally {
-            if (response != null) {
-                logDto.completeWithResponse(
-                        response.getStatusCode().value(),
-                        response.getHeaders().toString(),
-                        response.getBodyAsString(),
-                        success && response.getStatusCode().is2xxSuccessful(),
-                        errorMessage
-                );
-            } else {
-                logDto.completeWithResponse(
-                        HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                        null,
-                        null,
-                        false,
-                        errorMessage
-                );
-            }
-
             requestLogService.logRequestAsync(logDto);
         }
     }

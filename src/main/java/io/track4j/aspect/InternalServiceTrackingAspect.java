@@ -13,8 +13,6 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.util.StringUtils;
 
@@ -22,8 +20,6 @@ import java.lang.reflect.Method;
 
 @Aspect
 public class InternalServiceTrackingAspect {
-    private static final Logger logger = LoggerFactory.getLogger(InternalServiceTrackingAspect.class);
-
     private final Track4jProperties track4jProperties = Track4jServiceManager.getInstance().getProperties();
     private final RequestLogService requestLogService = Track4jServiceManager.getInstance().getRequestLogService();
     private final SerializationService serializationService = Track4jServiceManager.getInstance().getSerializationService();
@@ -46,7 +42,7 @@ public class InternalServiceTrackingAspect {
 
     private Object executeWithTracking(ProceedingJoinPoint pjp,
                                        Track4j config,
-                                       String traceId) throws Throwable {
+                                       String traceId) {
         String parentSpanId = TraceContext.getSpanId();
         String spanId = TraceContext.generateSpanId();
         String operationName = buildOperationName(pjp, config);
@@ -75,7 +71,6 @@ public class InternalServiceTrackingAspect {
         completeLog(logDto, trackingResult);
 
         if (trackingResult.exception != null) {
-            logger.error("Track4j: InternalServiceTrackingAspect.executeWithTracking, trackingResult failed to get", trackingResult.exception);
             return new Object();
         }
 

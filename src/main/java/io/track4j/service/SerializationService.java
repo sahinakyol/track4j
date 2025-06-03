@@ -9,81 +9,103 @@ import org.springframework.web.util.ContentCachingRequestWrapper;
 import org.springframework.web.util.ContentCachingResponseWrapper;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.Enumeration;
-import java.util.List;
+import java.util.Iterator;
 
-public class SerializationService {
+public final class SerializationService {
 
     private final ObjectMapper track4jObjectMapper;
-    private static final List<String> SENSITIVE_HEADERS = Arrays.asList(
-            "authorization", "cookie", "x-api-key", "x-auth-token"
-    );
+    private final Headers sensitiveHeaders;
+    private final Headers ipHeaders;
+    private static final String STRING_EMPTY_ARRAY = "[]";
+    private static final String STRING_ERROR_ARRAY = "[Error: %s]";
+    private static final String STRING_NULL = "null";
+    private static final String STRING_ERROR_JSON = "{error: %s}";
+    private static final String STRING_MASK = "******";
+    private static final String UNKNOWN = "unknown";
+    private static final String X_USER_ID_HEADER_NAME = "X-User-ID";
+    private static final String START_BRACKET = "{";
+    private static final String END_BRACKET = "}";
 
     public SerializationService() {
         this.track4jObjectMapper = track4jObjectMapper();
+        this.sensitiveHeaders = new Headers();
+        sensitiveHeaders.addHeader(new HttpHeader("authorization"));
+        sensitiveHeaders.addHeader(new HttpHeader("cookie"));
+        sensitiveHeaders.addHeader(new HttpHeader("x-api-key"));
+        sensitiveHeaders.addHeader(new HttpHeader("x-auth-token"));
+
+        this.ipHeaders = new Headers();
+        ipHeaders.addHeader(new HttpHeader("X-Forwarded-For"));
+        ipHeaders.addHeader(new HttpHeader("X-Real-IP"));
+        ipHeaders.addHeader(new HttpHeader("Proxy-Client-IP"));
+        ipHeaders.addHeader(new HttpHeader("WL-Proxy-Client-IP"));
+        ipHeaders.addHeader(new HttpHeader("HTTP_CLIENT_IP"));
+        ipHeaders.addHeader(new HttpHeader("HTTP_X_FORWARDED_FOR"));
     }
 
     public String serializeArgs(Object[] args) {
         if (args == null || args.length == 0) {
-            return "[]";
+            return STRING_EMPTY_ARRAY;
         }
 
         try {
             return track4jObjectMapper.writeValueAsString(args);
         } catch (Exception e) {
-            return String.format("[\"Error: %s\"]", e.getMessage());
+            return String.format(STRING_ERROR_ARRAY, e.getMessage());
         }
     }
 
     public String serializeResult(Object result) {
         if (result == null) {
-            return "null";
+            return STRING_NULL;
         }
 
         try {
             return track4jObjectMapper.writeValueAsString(result);
         } catch (Exception e) {
-            return String.format("{\"error\":\"%s\"}", e.getMessage());
+            return String.format(STRING_ERROR_JSON, e.getMessage());
         }
     }
 
     public String getHeadersAsJson(ContentCachingRequestWrapper request) {
-        StringBuilder json = new StringBuilder("{");
+        StringBuilder json = new StringBuilder(START_BRACKET);
         Enumeration<String> headerNames = request.getHeaderNames();
-        boolean first = true;
 
-        while (headerNames.hasMoreElements()) {
-            if (!first) json.append(",");
+        while (headerNames.asIterator().hasNext()){
             String name = headerNames.nextElement();
             String value = maskSensitiveHeader(name, request.getHeader(name));
             json.append("\"").append(name).append("\":\"").append(value).append("\"");
-            first = false;
+            if (headerNames.asIterator().hasNext()){
+                json.append(",");
+            }
         }
 
-        json.append("}");
+        json.append(END_BRACKET);
         return json.toString();
     }
 
     public String getHeadersAsJson(ContentCachingResponseWrapper response) {
-        StringBuilder json = new StringBuilder("{");
-        boolean first = true;
+        StringBuilder json = new StringBuilder(START_BRACKET);
+        Iterator<String> it = response.getHeaderNames().iterator();
 
-        for (String name : response.getHeaderNames()) {
-            if (!first) json.append(",");
+        while (it.hasNext()) {
+            String name = it.next();
             String value = maskSensitiveHeader(name, response.getHeader(name));
             json.append("\"").append(name).append("\":\"").append(value).append("\"");
-            first = false;
+            if (it.hasNext()) {          // sırada başka eleman varsa virgül ekle
+                json.append(",");
+            }
         }
 
-        json.append("}");
+        json.append(END_BRACKET);
         return json.toString();
     }
 
     private String maskSensitiveHeader(String name, String value) {
         if (value == null) return "";
-        if (SENSITIVE_HEADERS.contains(name.toLowerCase())) {
-            return "******";
+        if (sensitiveHeaders.contains(new HttpHeader(name.toLowerCase()))) {
+            return STRING_MASK;
         }
         return value;
     }
@@ -105,12 +127,10 @@ public class SerializationService {
     }
 
     public String getClientIp(HttpServletRequest request) {
-        String[] headerNames = {"X-Forwarded-For", "X-Real-IP", "Proxy-Client-IP",
-                "WL-Proxy-Client-IP", "HTTP_CLIENT_IP", "HTTP_X_FORWARDED_FOR"};
 
-        for (String headerName : headerNames) {
-            String ip = request.getHeader(headerName);
-            if (StringUtils.hasText(ip) && !"unknown".equalsIgnoreCase(ip)) {
+        for (HttpHeader httpHeader : ipHeaders) {
+            String ip = request.getHeader(httpHeader.getHeaderName());
+            if (StringUtils.hasText(ip) && !UNKNOWN.equalsIgnoreCase(ip)) {
                 return ip.split(",")[0].trim();
             }
         }
@@ -123,7 +143,7 @@ public class SerializationService {
             return request.getUserPrincipal().getName();
         }
 
-        String userId = request.getHeader("X-User-ID");
+        String userId = request.getHeader(X_USER_ID_HEADER_NAME);
         if (StringUtils.hasText(userId)) {
             return userId;
         }

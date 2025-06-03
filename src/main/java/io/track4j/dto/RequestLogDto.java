@@ -29,8 +29,6 @@ public class RequestLogDto {
     private String clientIp;
     private String tags;
 
-    public RequestLogDto() {}
-
     public static Builder builder() {
         return new Builder();
     }

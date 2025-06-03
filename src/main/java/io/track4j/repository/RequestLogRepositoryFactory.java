@@ -2,6 +2,7 @@ package io.track4j.repository;
 
 import io.track4j.autoconfigure.Track4jServiceManager;
 import io.track4j.data.Track4jDataSourceManager;
+import io.track4j.properties.StorageType;
 import io.track4j.properties.Track4jProperties;
 import io.track4j.repository.dbrepository.SqlRequestLogRepository;
 
@@ -18,7 +19,7 @@ public class RequestLogRepositoryFactory {
 
     public void init() {
         DataSource track4jDataSource = new Track4jDataSourceManager().getDataSource();
-        Track4jProperties.StorageType storageType = track4jProperties.getStorageType();
+        StorageType storageType = track4jProperties.getStorageType();
 
         switch (storageType) {
             case SQL:
