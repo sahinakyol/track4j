@@ -19,7 +19,6 @@ public class Track4jProperties {
     private boolean includeRequestBody = true;
     private boolean includeResponseBody = true;
     private boolean includeHeaders = true;
-    private int maxBodySize = 10240;
     private String[] excludePatterns = {};
 
     private StorageType storageType = StorageType.SQL;
@@ -73,7 +72,6 @@ public class Track4jProperties {
             this.includeRequestBody = Boolean.parseBoolean(properties.getProperty("track4j.include-request-body"));
             this.includeResponseBody = Boolean.parseBoolean(properties.getProperty("track4j.include-response-body"));
             this.includeHeaders = Boolean.parseBoolean(properties.getProperty("track4j.include-headers"));
-            this.maxBodySize = Integer.parseInt(properties.getProperty("track4j.max-body-size"));
             String rawPatterns = properties.getProperty("track4j.exclude-patterns");
             if (rawPatterns != null && !rawPatterns.isBlank()) {
                 String[] patterns = rawPatterns.split("\\s*,\\s*");
@@ -169,10 +167,6 @@ public class Track4jProperties {
 
     public boolean isIncludeHeaders() {
         return includeHeaders;
-    }
-
-    public int getMaxBodySize() {
-        return maxBodySize;
     }
 
     public String[] getExcludePatterns() {

@@ -82,7 +82,6 @@ track4j.filter-order=-100
 track4j.include-request-body=true
 track4j.include-response-body=true
 track4j.include-headers=true
-track4j.max-body-size=10240
 
 # Filtering
 track4j.exclude-patterns=/actuator/**,/health/**,/swagger-ui/**
@@ -103,14 +102,14 @@ track4j.hikari.pool-name=track4j-pool
 ```sql
 CREATE TABLE request_logs (
     id VARCHAR(36) NOT NULL PRIMARY KEY,
-    trace_id VARCHAR(32) NOT NULL,
-    span_id VARCHAR(32),
-    parent_span_id VARCHAR(32),
+    trace_id VARCHAR(48) NOT NULL,
+    span_id VARCHAR(11),
+    parent_span_id VARCHAR(11),
     service_name VARCHAR(100),
-    operation_name VARCHAR(200),
-    request_type VARCHAR(20) CHECK (request_type IN ('INCOMING', 'EXTERNAL', 'INTERNAL')),
-    method VARCHAR(10),
-    url VARCHAR(1000),
+    operation_name VARCHAR(2055),
+    request_type VARCHAR(8) CHECK (request_type IN ('INCOMING', 'EXTERNAL', 'INTERNAL')),
+    method VARCHAR(6),
+    url VARCHAR(2048),
     request_headers TEXT,
     request_body TEXT,
     response_headers TEXT,
@@ -131,30 +130,31 @@ CREATE TABLE request_logs (
 #### PostgreSQL
 ```sql
 CREATE TABLE request_logs (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    trace_id VARCHAR(32) NOT NULL,
-    span_id VARCHAR(32),
-    parent_span_id VARCHAR(32),
-    service_name VARCHAR(100),
-    operation_name VARCHAR(200),
-    request_type VARCHAR(20) CHECK (request_type IN ('INCOMING', 'EXTERNAL', 'INTERNAL')),
-    method VARCHAR(10),
-    url VARCHAR(1000),
-    request_headers JSONB,
-    request_body TEXT,
-    response_headers JSONB,
-    response_body TEXT,
-    status_code INTEGER,
-    start_time TIMESTAMP WITH TIME ZONE,
-    end_time TIMESTAMP WITH TIME ZONE,
-    duration_ms INTEGER,
-    success BOOLEAN,
-    error_message TEXT,
-    user_id VARCHAR(100),
-    client_ip INET,
-    tags JSONB,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  trace_id VARCHAR(48) NOT NULL,
+  span_id VARCHAR(11),
+  parent_span_id VARCHAR(11),
+  service_name VARCHAR(100),
+  operation_name VARCHAR(2055),
+  request_type VARCHAR(8) CHECK (request_type IN ('INCOMING', 'EXTERNAL', 'INTERNAL')),
+  method VARCHAR(6),
+  url VARCHAR(2048),
+  request_headers TEXT,
+  request_body TEXT,
+  response_headers TEXT,
+  response_body TEXT,
+  status_code INTEGER,
+  start_time TIMESTAMP WITH TIME ZONE,
+  end_time TIMESTAMP WITH TIME ZONE,
+  duration_ms INTEGER,
+  success BOOLEAN,
+  error_message TEXT,
+  user_id VARCHAR(100),
+  client_ip VARCHAR(39),
+  tags TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
 ```
 
 ### 4. Usage Examples
@@ -246,7 +246,6 @@ public class ExternalApiClient {
 | `track4j.include-request-body` | `true` | Include request body in logs |
 | `track4j.include-response-body` | `true` | Include response body in logs |
 | `track4j.include-headers` | `true` | Include HTTP headers in logs |
-| `track4j.max-body-size` | `10240` | Maximum body size to capture (bytes) |
 
 ### Filtering Settings
 
@@ -295,9 +294,9 @@ public class ExternalApiClient {
 | `request_type` | ENUM | `INCOMING`, `EXTERNAL`, `INTERNAL` |
 | `method` | VARCHAR(10) | HTTP method |
 | `url` | VARCHAR(1000) | Request URL |
-| `request_headers` | TEXT/JSONB | Request headers |
+| `request_headers` | TEXT | Request headers |
 | `request_body` | TEXT | Request body |
-| `response_headers` | TEXT/JSONB | Response headers |
+| `response_headers` | TEXT | Response headers |
 | `response_body` | TEXT | Response body |
 | `status_code` | INTEGER | HTTP status code |
 | `start_time` | TIMESTAMP | Request start time |
@@ -307,7 +306,7 @@ public class ExternalApiClient {
 | `error_message` | TEXT | Error message if failed |
 | `user_id` | VARCHAR(100) | User identifier |
 | `client_ip` | VARCHAR(45) | Client IP address |
-| `tags` | TEXT/JSONB | Custom tags |
+| `tags` | TEXT | Custom tags |
 | `created_at` | TIMESTAMP | Record creation time |
 
 ## 📈 Monitoring and Analytics

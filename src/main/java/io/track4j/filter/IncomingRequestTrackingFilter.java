@@ -2,6 +2,8 @@ package io.track4j.filter;
 
 import io.track4j.autoconfigure.Track4jServiceManager;
 import io.track4j.context.TraceContext;
+import io.track4j.dto.LightweightRequestWrapper;
+import io.track4j.dto.LightweightResponseWrapper;
 import io.track4j.dto.RequestLogDto;
 import io.track4j.entity.RequestLog;
 import io.track4j.helper.HttpStatusCode;
@@ -16,13 +18,10 @@ import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.util.AntPathMatcher;
-import org.springframework.web.util.ContentCachingRequestWrapper;
-import org.springframework.web.util.ContentCachingResponseWrapper;
 
 import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.Arrays;
 
 public class IncomingRequestTrackingFilter implements Filter {
 
@@ -43,6 +42,8 @@ public class IncomingRequestTrackingFilter implements Filter {
             return;
         }
 
+        TraceContext.TraceInfo existingTrace = TraceContext.getTraceInfo();
+
         String traceId = httpRequest.getHeader(TraceContext.getTraceIdHeader());
         if (traceId == null || traceId.isBlank()) {
             traceId = TraceContext.generateTraceId();
@@ -50,18 +51,17 @@ public class IncomingRequestTrackingFilter implements Filter {
 
         String spanId = TraceContext.generateSpanId();
         String parentSpanId = httpRequest.getHeader(TraceContext.getSpanIdHeader());
-        if (parentSpanId == null){
-            parentSpanId = TraceContext.getSpanId();
+        if (parentSpanId == null) {
+            parentSpanId = existingTrace.spanId;
         }
 
-        TraceContext.setTraceId(traceId);
-        TraceContext.setSpanId(spanId);
+        TraceContext.setTraceData(traceId, spanId);
 
         httpResponse.setHeader(TraceContext.getTraceIdHeader(), traceId);
         httpResponse.setHeader(TraceContext.getSpanIdHeader(), spanId);
 
-        ContentCachingRequestWrapper requestWrapper = new ContentCachingRequestWrapper(httpRequest);
-        ContentCachingResponseWrapper responseWrapper = new ContentCachingResponseWrapper(httpResponse);
+        LightweightRequestWrapper requestWrapper = new LightweightRequestWrapper(httpRequest);
+        LightweightResponseWrapper responseWrapper = new LightweightResponseWrapper(httpResponse);
 
         LocalDateTime startTime = LocalDateTime.now();
         boolean success = true;
@@ -75,37 +75,43 @@ public class IncomingRequestTrackingFilter implements Filter {
         } finally {
             LocalDateTime endTime = LocalDateTime.now();
 
-            RequestLogDto.Builder builder = RequestLogDto.builder()
-                .traceId(traceId)
-                .spanId(spanId)
-                .parentSpanId(parentSpanId)
-                .operationName(requestWrapper.getMethod() + " " + requestWrapper.getRequestURI())
-                .requestType(RequestLog.RequestType.INCOMING)
-                .method(requestWrapper.getMethod())
-                .url(requestWrapper.getRequestURL().toString())
-                .statusCode(responseWrapper.getStatus())
-                .startTime(startTime)
-                .endTime(endTime)
-                .durationMs(Duration.between(startTime, endTime).toMillis())
-                .success(success && responseWrapper.getStatus() < HttpStatusCode.HTTP_SERVER_INTERNAL_ERROR.getValue())
-                .errorMessage(errorMessage)
-                .userId(serializationService.extractUserId(requestWrapper))
-                .clientIp(serializationService.getClientIp(requestWrapper));
+            long durationMs = Duration.between(startTime, endTime).toMillis();
+            int statusCode = responseWrapper.getStatus();
+            boolean isSuccess = success && statusCode < HttpStatusCode.HTTP_SERVER_INTERNAL_ERROR.getValue();
+
+            RequestLogDto dto = new RequestLogDto();
+
+            dto.setTraceId(traceId);
+            dto.setSpanId(spanId);
+            dto.setParentSpanId(parentSpanId);
+            dto.setOperationName(requestWrapper.getMethod() + " " + requestWrapper.getRequestURI());
+            dto.setRequestType(RequestLog.RequestType.INCOMING);
+            dto.setMethod(requestWrapper.getMethod());
+            dto.setUrl(requestWrapper.getRequestURL().toString());
+            dto.setStatusCode(statusCode);
+            dto.setStartTime(startTime);
+            dto.setEndTime(endTime);
+            dto.setDurationMs(durationMs);
+            dto.setSuccess(isSuccess);
+            dto.setErrorMessage(errorMessage);
+            dto.setUserId(serializationService.extractUserId(requestWrapper));
+            dto.setClientIp(serializationService.getClientIp(requestWrapper));
+
 
             if (track4jProperties == null || track4jProperties.isIncludeHeaders()) {
-                builder.requestHeaders(serializationService.getHeadersAsJson(requestWrapper))
-                       .responseHeaders(serializationService.getHeadersAsJson(responseWrapper));
+                dto.setRequestHeaders(serializationService.getHeadersAsJson(requestWrapper));
+                dto.setResponseHeaders(serializationService.getHeadersAsJson(responseWrapper));
             }
 
             if (track4jProperties == null || track4jProperties.isIncludeRequestBody()) {
-                builder.requestBody(serializationService.getRequestBody(requestWrapper));
+                dto.setRequestBody(serializationService.getRequestBody(requestWrapper));
             }
 
             if (track4jProperties == null || track4jProperties.isIncludeResponseBody()) {
-                builder.responseBody(serializationService.getResponseBody(responseWrapper));
+                dto.setResponseBody(serializationService.getResponseBody(responseWrapper));
             }
 
-            getRequestLogService().logRequestAsync(builder.build());
+            getRequestLogService().logRequestAsync(dto);
 
             responseWrapper.copyBodyToResponse();
             TraceContext.clear();
@@ -116,9 +122,14 @@ public class IncomingRequestTrackingFilter implements Filter {
         if (track4jProperties == null || track4jProperties.getExcludePatterns() == null) {
             return false;
         }
-        
-        return Arrays.stream(track4jProperties.getExcludePatterns())
-            .anyMatch(pattern -> pathMatcher.match(pattern, path));
+
+        String[] patterns = track4jProperties.getExcludePatterns();
+        for (String pattern : patterns) {
+            if (pathMatcher.match(pattern, path)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private RequestLogService getRequestLogService() {

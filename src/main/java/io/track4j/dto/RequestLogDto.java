@@ -29,142 +29,30 @@ public class RequestLogDto {
     private String clientIp;
     private String tags;
 
-    public static Builder builder() {
-        return new Builder();
-    }
-
-    public static class Builder {
-        private RequestLogDto dto = new RequestLogDto();
-
-        public Builder traceId(String traceId) {
-            dto.traceId = traceId;
-            return this;
-        }
-
-        public Builder spanId(String spanId) {
-            dto.spanId = spanId;
-            return this;
-        }
-
-        public Builder parentSpanId(String parentSpanId) {
-            dto.parentSpanId = parentSpanId;
-            return this;
-        }
-
-        public Builder operationName(String operationName) {
-            dto.operationName = operationName;
-            return this;
-        }
-
-        public Builder requestType(RequestLog.RequestType requestType) {
-            dto.requestType = requestType;
-            return this;
-        }
-
-        public Builder method(String method) {
-            dto.method = method;
-            return this;
-        }
-
-        public Builder url(String url) {
-            dto.url = url;
-            return this;
-        }
-
-        public Builder requestHeaders(String requestHeaders) {
-            dto.requestHeaders = requestHeaders;
-            return this;
-        }
-
-        public Builder requestBody(String requestBody) {
-            dto.requestBody = requestBody;
-            return this;
-        }
-
-        public Builder responseHeaders(String responseHeaders) {
-            dto.responseHeaders = responseHeaders;
-            return this;
-        }
-
-        public Builder responseBody(String responseBody) {
-            dto.responseBody = responseBody;
-            return this;
-        }
-
-        public Builder statusCode(Integer statusCode) {
-            dto.statusCode = statusCode;
-            return this;
-        }
-
-        public Builder startTime(LocalDateTime startTime) {
-            dto.startTime = startTime;
-            return this;
-        }
-
-        public Builder endTime(LocalDateTime endTime) {
-            dto.endTime = endTime;
-            return this;
-        }
-
-        public Builder durationMs(Long durationMs) {
-            dto.durationMs = durationMs;
-            return this;
-        }
-
-        public Builder success(Boolean success) {
-            dto.success = success;
-            return this;
-        }
-
-        public Builder errorMessage(String errorMessage) {
-            dto.errorMessage = errorMessage;
-            return this;
-        }
-
-        public Builder userId(String userId) {
-            dto.userId = userId;
-            return this;
-        }
-
-        public Builder clientIp(String clientIp) {
-            dto.clientIp = clientIp;
-            return this;
-        }
-
-        public Builder tags(String tags) {
-            dto.tags = tags;
-            return this;
-        }
-
-        public RequestLogDto build() {
-            return dto;
-        }
-    }
-
     public static RequestLogDto fromExternalRequest(String url, String method,
                                                     String traceId, String spanId) {
-        return builder()
-                .traceId(traceId)
-                .spanId(spanId)
-                .operationName(RequestLogDto.HTTP + " " + method + " " + extractHostFromUrl(url))
-                .requestType(RequestLog.RequestType.EXTERNAL)
-                .method(method)
-                .url(url)
-                .startTime(LocalDateTime.now())
-                .build();
+        RequestLogDto dto = new RequestLogDto();
+        dto.traceId = traceId;
+        dto.spanId = spanId;
+        dto.operationName = HTTP + " " + method + " " + extractHostFromUrl(url);
+        dto.requestType = RequestLog.RequestType.EXTERNAL;
+        dto.method = method;
+        dto.url = url;
+        dto.startTime = LocalDateTime.now();
+        return dto;
     }
 
     public static RequestLogDto fromInternalCall(String className, String methodName,
                                                  String traceId, String spanId) {
-        return builder()
-                .traceId(traceId)
-                .spanId(spanId)
-                .operationName(className + "." + methodName)
-                .requestType(RequestLog.RequestType.INTERNAL)
-                .method(RequestLog.RequestType.INTERNAL.getValue())
-                .url(className + "." + methodName)
-                .startTime(LocalDateTime.now())
-                .build();
+        RequestLogDto dto = new RequestLogDto();
+        dto.traceId = traceId;
+        dto.spanId = spanId;
+        dto.operationName = className + "." + methodName;
+        dto.requestType = RequestLog.RequestType.INTERNAL;
+        dto.method = RequestLog.RequestType.INTERNAL.getValue();
+        dto.url = className + "." + methodName;
+        dto.startTime = LocalDateTime.now();
+        return dto;
     }
 
     private static String extractHostFromUrl(String url) {

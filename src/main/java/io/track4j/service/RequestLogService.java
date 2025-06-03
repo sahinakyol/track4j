@@ -70,9 +70,9 @@ public class RequestLogService {
                 RequestLogDto oldLog = logBuffer.poll();
                 if (oldLog != null) {
                     rescueBuffer.put(oldLog);
+                    logger.warn("Track4j: Request log buffer is full, rescued log");
                 }
                 logBuffer.put(dto);
-                logger.warn("Track4j: Request log buffer is full, dropping log");
             }
 
             if (logBuffer.size() >= track4jProperties.getBatchSize()) {
@@ -90,7 +90,7 @@ public class RequestLogService {
     }
 
     private void processBuffer() {
-        List<RequestLogDto> batch = new ArrayList<>();
+        List<RequestLogDto> batch = new ArrayList<>(logBuffer.size());
         logBuffer.drainTo(batch, track4jProperties.getBatchSize());
 
         if (!batch.isEmpty()) {
@@ -103,7 +103,7 @@ public class RequestLogService {
             return;
         }
 
-        List<RequestLogDto> batch = new ArrayList<>();
+        List<RequestLogDto> batch = new ArrayList<>(rescueBuffer.size());
         rescueBuffer.drainTo(batch, track4jProperties.getBatchSize());
 
         if (!batch.isEmpty()) {
@@ -142,10 +142,10 @@ public class RequestLogService {
         log.setRequestType(dto.getRequestType());
         log.setMethod(dto.getMethod());
         log.setUrl(dto.getUrl());
-        log.setRequestHeaders(truncate(dto.getRequestHeaders(), track4jProperties.getMaxBodySize()));
-        log.setRequestBody(truncate(dto.getRequestBody(), track4jProperties.getMaxBodySize()));
-        log.setResponseHeaders(truncate(dto.getResponseHeaders(), track4jProperties.getMaxBodySize()));
-        log.setResponseBody(truncate(dto.getResponseBody(), track4jProperties.getMaxBodySize()));
+        log.setRequestHeaders(dto.getRequestHeaders());
+        log.setRequestBody(dto.getRequestBody());
+        log.setResponseHeaders(dto.getResponseHeaders());
+        log.setResponseBody(dto.getResponseBody());
         log.setStatusCode(dto.getStatusCode());
         log.setStartTime(dto.getStartTime());
         log.setEndTime(dto.getEndTime());
@@ -156,15 +156,5 @@ public class RequestLogService {
         log.setClientIp(dto.getClientIp());
         log.setTags(dto.getTags());
         return log;
-    }
-
-    private String truncate(String value, int maxLength) {
-        if (value == null || value.length() <= maxLength) {
-            return value;
-        }
-        StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append(value, 0, maxLength);
-        stringBuilder.append("... [truncated]");
-        return stringBuilder.toString();
     }
 }

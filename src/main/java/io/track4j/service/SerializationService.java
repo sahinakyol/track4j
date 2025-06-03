@@ -3,10 +3,10 @@ package io.track4j.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import io.track4j.dto.LightweightRequestWrapper;
+import io.track4j.dto.LightweightResponseWrapper;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.util.StringUtils;
-import org.springframework.web.util.ContentCachingRequestWrapper;
-import org.springframework.web.util.ContentCachingResponseWrapper;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Enumeration;
@@ -15,8 +15,8 @@ import java.util.Iterator;
 public final class SerializationService {
 
     private final ObjectMapper track4jObjectMapper;
-    private final Headers sensitiveHeaders;
-    private final Headers ipHeaders;
+    private final HttpHeaders sensitiveHttpHeaders;
+    private final HttpHeaders ipHttpHeaders;
     private static final String STRING_EMPTY_ARRAY = "[]";
     private static final String STRING_ERROR_ARRAY = "[Error: %s]";
     private static final String STRING_NULL = "null";
@@ -26,22 +26,25 @@ public final class SerializationService {
     private static final String X_USER_ID_HEADER_NAME = "X-User-ID";
     private static final String START_BRACKET = "{";
     private static final String END_BRACKET = "}";
+    private static final String QUOTE = "\"";
+    private static final String COLON = ":";
+    private static final String COMMA = ",";
 
     public SerializationService() {
         this.track4jObjectMapper = track4jObjectMapper();
-        this.sensitiveHeaders = new Headers();
-        sensitiveHeaders.addHeader(new HttpHeader("authorization"));
-        sensitiveHeaders.addHeader(new HttpHeader("cookie"));
-        sensitiveHeaders.addHeader(new HttpHeader("x-api-key"));
-        sensitiveHeaders.addHeader(new HttpHeader("x-auth-token"));
+        this.sensitiveHttpHeaders = new HttpHeaders();
+        sensitiveHttpHeaders.addHeader(new HttpHeader("authorization"));
+        sensitiveHttpHeaders.addHeader(new HttpHeader("cookie"));
+        sensitiveHttpHeaders.addHeader(new HttpHeader("x-api-key"));
+        sensitiveHttpHeaders.addHeader(new HttpHeader("x-auth-token"));
 
-        this.ipHeaders = new Headers();
-        ipHeaders.addHeader(new HttpHeader("X-Forwarded-For"));
-        ipHeaders.addHeader(new HttpHeader("X-Real-IP"));
-        ipHeaders.addHeader(new HttpHeader("Proxy-Client-IP"));
-        ipHeaders.addHeader(new HttpHeader("WL-Proxy-Client-IP"));
-        ipHeaders.addHeader(new HttpHeader("HTTP_CLIENT_IP"));
-        ipHeaders.addHeader(new HttpHeader("HTTP_X_FORWARDED_FOR"));
+        this.ipHttpHeaders = new HttpHeaders();
+        ipHttpHeaders.addHeader(new HttpHeader("X-Forwarded-For"));
+        ipHttpHeaders.addHeader(new HttpHeader("X-Real-IP"));
+        ipHttpHeaders.addHeader(new HttpHeader("Proxy-Client-IP"));
+        ipHttpHeaders.addHeader(new HttpHeader("WL-Proxy-Client-IP"));
+        ipHttpHeaders.addHeader(new HttpHeader("HTTP_CLIENT_IP"));
+        ipHttpHeaders.addHeader(new HttpHeader("HTTP_X_FORWARDED_FOR"));
     }
 
     public String serializeArgs(Object[] args) {
@@ -68,16 +71,22 @@ public final class SerializationService {
         }
     }
 
-    public String getHeadersAsJson(ContentCachingRequestWrapper request) {
+    public String getHeadersAsJson(LightweightRequestWrapper request) {
         StringBuilder json = new StringBuilder(START_BRACKET);
         Enumeration<String> headerNames = request.getHeaderNames();
 
-        while (headerNames.asIterator().hasNext()){
+        while (headerNames.asIterator().hasNext()) {
             String name = headerNames.nextElement();
             String value = maskSensitiveHeader(name, request.getHeader(name));
-            json.append("\"").append(name).append("\":\"").append(value).append("\"");
-            if (headerNames.asIterator().hasNext()){
-                json.append(",");
+            json.append(QUOTE)
+                    .append(name)
+                    .append(QUOTE)
+                    .append(COLON)
+                    .append(QUOTE)
+                    .append(value)
+                    .append(QUOTE);
+            if (headerNames.asIterator().hasNext()) {
+                json.append(COMMA);
             }
         }
 
@@ -85,16 +94,22 @@ public final class SerializationService {
         return json.toString();
     }
 
-    public String getHeadersAsJson(ContentCachingResponseWrapper response) {
+    public String getHeadersAsJson(LightweightResponseWrapper response) {
         StringBuilder json = new StringBuilder(START_BRACKET);
         Iterator<String> it = response.getHeaderNames().iterator();
 
         while (it.hasNext()) {
             String name = it.next();
             String value = maskSensitiveHeader(name, response.getHeader(name));
-            json.append("\"").append(name).append("\":\"").append(value).append("\"");
-            if (it.hasNext()) {          // sırada başka eleman varsa virgül ekle
-                json.append(",");
+            json.append(QUOTE)
+                    .append(name)
+                    .append(QUOTE)
+                    .append(COLON)
+                    .append(QUOTE)
+                    .append(value)
+                    .append(QUOTE);
+            if (it.hasNext()) {
+                json.append(COMMA);
             }
         }
 
@@ -104,13 +119,13 @@ public final class SerializationService {
 
     private String maskSensitiveHeader(String name, String value) {
         if (value == null) return "";
-        if (sensitiveHeaders.contains(new HttpHeader(name.toLowerCase()))) {
+        if (sensitiveHttpHeaders.contains(new HttpHeader(name.toLowerCase()))) {
             return STRING_MASK;
         }
         return value;
     }
 
-    public String getRequestBody(ContentCachingRequestWrapper request) {
+    public String getRequestBody(LightweightRequestWrapper request) {
         byte[] content = request.getContentAsByteArray();
         if (content.length > 0) {
             return new String(content, StandardCharsets.UTF_8);
@@ -118,7 +133,7 @@ public final class SerializationService {
         return null;
     }
 
-    public String getResponseBody(ContentCachingResponseWrapper response) {
+    public String getResponseBody(LightweightResponseWrapper response) {
         byte[] content = response.getContentAsByteArray();
         if (content.length > 0) {
             return new String(content, StandardCharsets.UTF_8);
@@ -127,11 +142,14 @@ public final class SerializationService {
     }
 
     public String getClientIp(HttpServletRequest request) {
-
-        for (HttpHeader httpHeader : ipHeaders) {
+        for (HttpHeader httpHeader : ipHttpHeaders) {
             String ip = request.getHeader(httpHeader.getHeaderName());
             if (StringUtils.hasText(ip) && !UNKNOWN.equalsIgnoreCase(ip)) {
-                return ip.split(",")[0].trim();
+                int commaIndex = ip.indexOf(',');
+                if (commaIndex > 0) {
+                    return ip.substring(0, commaIndex).trim();
+                }
+                return ip.trim();
             }
         }
 

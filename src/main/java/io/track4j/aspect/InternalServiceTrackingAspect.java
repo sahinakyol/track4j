@@ -17,6 +17,8 @@ import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.util.StringUtils;
 
 import java.lang.reflect.Method;
+import java.time.Duration;
+import java.time.LocalDateTime;
 
 @Aspect
 public class InternalServiceTrackingAspect {
@@ -28,35 +30,43 @@ public class InternalServiceTrackingAspect {
     public Object trackAnnotatedCalls(ProceedingJoinPoint pjp) throws Throwable {
 
         Track4j trackableConfig = getTrackableAnnotation(pjp);
-        if (trackableConfig == null || !trackableConfig.enabled() || !track4jProperties.isEnabled() || !track4jProperties.isInternalCallTrackingEnabled()) {
+        if (trackableConfig == null || !trackableConfig.enabled()
+                || !track4jProperties.isEnabled() || !track4jProperties.isInternalCallTrackingEnabled()) {
             return pjp.proceed();
         }
 
-        String traceId = TraceContext.getTraceId();
+        TraceContext.TraceInfo currentTrace = TraceContext.getTraceInfo();
+
+        String traceId = currentTrace.traceId;
         if (traceId == null || traceId.isBlank()) {
             traceId = TraceContext.generateTraceId();
         }
 
-        return executeWithTracking(pjp, trackableConfig, traceId);
+        return executeWithTracking(pjp, trackableConfig, traceId, currentTrace.spanId);
     }
 
     private Object executeWithTracking(ProceedingJoinPoint pjp,
                                        Track4j config,
-                                       String traceId) {
-        String parentSpanId = TraceContext.getSpanId();
+                                       String traceId,
+                                       String parentSpanId) {
+
         String spanId = TraceContext.generateSpanId();
-        String operationName = buildOperationName(pjp, config);
+        String className = getClassName(pjp);
+        String methodName = getMethodName(pjp);
+        String operationName = buildOperationName(config, className, methodName);
 
-        RequestLogDto logDto = RequestLogDto.fromInternalCall(
-                getClassName(pjp),
-                getMethodName(pjp),
-                traceId,
-                spanId
-        );
+        LocalDateTime startTime = LocalDateTime.now();
 
+        RequestLogDto logDto = new RequestLogDto();
+        logDto.setTraceId(traceId);
+        logDto.setSpanId(spanId);
         logDto.setParentSpanId(parentSpanId);
         logDto.setOperationName(operationName);
-        logDto.setTags(String.join(",", config.tags()));
+        logDto.setRequestType(io.track4j.entity.RequestLog.RequestType.INTERNAL);
+        logDto.setMethod(io.track4j.entity.RequestLog.RequestType.INTERNAL.getValue());
+        logDto.setUrl(className + "." + methodName);
+        logDto.setStartTime(startTime);
+        logDto.setTags(config.tags().length > 0 ? String.join(",", config.tags()) : null);
 
         if (config.includeArgs()) {
             logDto.setRequestBody(serializationService.serializeArgs(pjp.getArgs()));
@@ -64,11 +74,20 @@ public class InternalServiceTrackingAspect {
 
         TrackingResult trackingResult = executeWithSpanContext(pjp, spanId, traceId);
 
+        LocalDateTime endTime = LocalDateTime.now();
+        long durationMs = Duration.between(startTime, endTime).toMillis();
+
         if (config.includeResult() && trackingResult.result != null) {
             logDto.setResponseBody(serializationService.serializeResult(trackingResult.result));
         }
 
-        completeLog(logDto, trackingResult);
+        logDto.setEndTime(endTime);
+        logDto.setDurationMs(durationMs);
+        logDto.setStatusCode(HttpStatusCode.HTTP_SUCCESS.getValue());
+        logDto.setSuccess(trackingResult.exception == null);
+        logDto.setErrorMessage(trackingResult.exception != null ? trackingResult.exception.getMessage() : null);
+
+        requestLogService.logRequestAsync(logDto);
 
         if (trackingResult.exception != null) {
             return new Object();
@@ -78,18 +97,17 @@ public class InternalServiceTrackingAspect {
     }
 
     private TrackingResult executeWithSpanContext(ProceedingJoinPoint pjp, String spanId, String traceId) {
-        String originalSpanId = TraceContext.getSpanId();
+        TraceContext.TraceInfo originalContext = TraceContext.getTraceInfo();
         Object result = null;
         Throwable exception = null;
 
         try {
-            TraceContext.setSpanId(spanId);
-            TraceContext.setTraceId(traceId);
+            TraceContext.setTraceData(traceId, spanId);
             result = pjp.proceed();
         } catch (Throwable e) {
             exception = e;
         } finally {
-            TraceContext.setSpanId(originalSpanId);
+            TraceContext.setTraceData(originalContext.traceId, originalContext.spanId);
         }
 
         return new TrackingResult(result, exception);
@@ -107,24 +125,12 @@ public class InternalServiceTrackingAspect {
         return AnnotationUtils.findAnnotation(pjp.getTarget().getClass(), Track4j.class);
     }
 
-    private String buildOperationName(ProceedingJoinPoint pjp, Track4j config) {
+    private String buildOperationName(Track4j config,
+                                      String className, String methodName) {
         if (StringUtils.hasText(config.name())) {
             return config.name();
         }
-
-        return getClassName(pjp) + "." + getMethodName(pjp);
-    }
-
-    private void completeLog(RequestLogDto logDto, TrackingResult result) {
-        logDto.completeWithResponse(
-                HttpStatusCode.HTTP_SUCCESS.getValue(),
-                logDto.getResponseHeaders(),
-                logDto.getResponseBody(),
-                result.exception == null,
-                result.exception != null ? result.exception.getMessage() : null
-        );
-
-        requestLogService.logRequestAsync(logDto);
+        return className + "." + methodName;
     }
 
     private String getClassName(ProceedingJoinPoint pjp) {
