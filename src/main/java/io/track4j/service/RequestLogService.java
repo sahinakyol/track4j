@@ -1,6 +1,5 @@
 package io.track4j.service;
 
-import io.track4j.dto.RequestLogDto;
 import io.track4j.entity.RequestLog;
 import io.track4j.properties.Track4jProperties;
 import io.track4j.repository.RequestLogRepositoryAdapter;
@@ -22,8 +21,8 @@ public class RequestLogService {
 
     private final Track4jProperties track4jProperties;
     private final RequestLogRepositoryAdapter repository;
-    private final BlockingQueue<RequestLogDto> logBuffer;
-    private final BlockingQueue<RequestLogDto> rescueBuffer;
+    private final BlockingQueue<RequestLog> logBuffer;
+    private final BlockingQueue<RequestLog> rescueBuffer;
     private final ScheduledExecutorService scheduler;
     private final ExecutorService worker;
 
@@ -35,17 +34,13 @@ public class RequestLogService {
         this.scheduler = Executors.newScheduledThreadPool(1);
         this.worker = Executors.newFixedThreadPool(2);
 
-        if (track4jProperties.isEnabled()) {
-            repository.initialize();
-
-            scheduler.scheduleWithFixedDelay(
-                    this::processBuffer,
-                    0,
-                    track4jProperties.getFlushInterval(),
-                    TimeUnit.MILLISECONDS
-            );
-
-        }
+        repository.initialize();
+        scheduler.scheduleWithFixedDelay(
+                this::processBuffer,
+                0,
+                track4jProperties.getFlushInterval(),
+                TimeUnit.MILLISECONDS
+        );
     }
 
     public void shutdown() {
@@ -64,15 +59,15 @@ public class RequestLogService {
         }
     }
 
-    public void logRequestAsync(RequestLogDto dto) {
+    public void logRequestAsync(RequestLog requestLog) {
         try {
-            if (!logBuffer.offer(dto, 5, TimeUnit.MILLISECONDS)) {
-                RequestLogDto oldLog = logBuffer.poll();
+            if (!logBuffer.offer(requestLog, 5, TimeUnit.MILLISECONDS)) {
+                RequestLog oldLog = logBuffer.poll();
                 if (oldLog != null) {
                     rescueBuffer.put(oldLog);
                     logger.warn("Track4j: Request log buffer is full, rescued log");
                 }
-                logBuffer.put(dto);
+                logBuffer.put(requestLog);
             }
 
             if (logBuffer.size() >= track4jProperties.getBatchSize()) {
@@ -90,7 +85,7 @@ public class RequestLogService {
     }
 
     private void processBuffer() {
-        List<RequestLogDto> batch = new ArrayList<>(logBuffer.size());
+        List<RequestLog> batch = new ArrayList<>(logBuffer.size());
         logBuffer.drainTo(batch, track4jProperties.getBatchSize());
 
         if (!batch.isEmpty()) {
@@ -103,7 +98,7 @@ public class RequestLogService {
             return;
         }
 
-        List<RequestLogDto> batch = new ArrayList<>(rescueBuffer.size());
+        List<RequestLog> batch = new ArrayList<>(rescueBuffer.size());
         rescueBuffer.drainTo(batch, track4jProperties.getBatchSize());
 
         if (!batch.isEmpty()) {
@@ -111,16 +106,13 @@ public class RequestLogService {
         }
     }
 
-    private void processBatch(List<RequestLogDto> batch) {
+    private void processBatch(List<RequestLog> logs) {
         try {
-            ArrayList<RequestLog> logs = new ArrayList<>(batch.size());
-            for (RequestLogDto requestLogDto : batch) {
-                logs.add(convertToEntity(requestLogDto));
-            }
-
             repository.saveAll(logs);
         } catch (Exception e) {
             logger.error("Track4j: Failed to save request logs", e);
+        } finally {
+            logs.clear();
         }
     }
 
@@ -131,30 +123,5 @@ public class RequestLogService {
         while (!rescueBuffer.isEmpty()) {
             rescueProcessBuffer();
         }
-    }
-
-    private RequestLog convertToEntity(RequestLogDto dto) {
-        RequestLog log = new RequestLog();
-        log.setTraceId(dto.getTraceId());
-        log.setSpanId(dto.getSpanId());
-        log.setParentSpanId(dto.getParentSpanId());
-        log.setOperationName(dto.getOperationName());
-        log.setRequestType(dto.getRequestType());
-        log.setMethod(dto.getMethod());
-        log.setUrl(dto.getUrl());
-        log.setRequestHeaders(dto.getRequestHeaders());
-        log.setRequestBody(dto.getRequestBody());
-        log.setResponseHeaders(dto.getResponseHeaders());
-        log.setResponseBody(dto.getResponseBody());
-        log.setStatusCode(dto.getStatusCode());
-        log.setStartTime(dto.getStartTime());
-        log.setEndTime(dto.getEndTime());
-        log.setDurationMs(dto.getDurationMs());
-        log.setSuccess(dto.getSuccess());
-        log.setErrorMessage(dto.getErrorMessage());
-        log.setUserId(dto.getUserId());
-        log.setClientIp(dto.getClientIp());
-        log.setTags(dto.getTags());
-        return log;
     }
 }

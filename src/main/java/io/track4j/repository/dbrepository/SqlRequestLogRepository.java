@@ -11,7 +11,6 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -43,31 +42,21 @@ public class SqlRequestLogRepository implements RequestLogRepositoryAdapter {
     }
 
     @Override
-    public RequestLog save(RequestLog requestLog) {
-        if (requestLog.getId() == null) {
-            requestLog.setId(UUID.randomUUID().toString());
-        }
-        if (requestLog.getCreatedAt() == null) {
-            requestLog.setCreatedAt(LocalDateTime.now());
-        }
-
+    public void save(RequestLog requestLog) {
         try (Connection conn = track4jDataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(INSERT_SQL)) {
-
             setParameters(ps, requestLog);
             ps.executeUpdate();
-            return requestLog;
 
         } catch (SQLException e) {
             logger.error("Track4j: Failed to save request log", e);
-            return new RequestLog();
         }
     }
 
     @Override
-    public List<RequestLog> saveAll(List<RequestLog> requestLogs) {
+    public void saveAll(List<RequestLog> requestLogs) {
         if (requestLogs.isEmpty()) {
-            return requestLogs;
+            return;
         }
 
         try (Connection conn = track4jDataSource.getConnection();
@@ -76,24 +65,15 @@ public class SqlRequestLogRepository implements RequestLogRepositoryAdapter {
             conn.setAutoCommit(false);
 
             for (RequestLog log : requestLogs) {
-                if (log.getId() == null) {
-                    log.setId(UUID.randomUUID().toString());
-                }
-                if (log.getCreatedAt() == null) {
-                    log.setCreatedAt(LocalDateTime.now());
-                }
-
                 setParameters(ps, log);
                 ps.addBatch();
             }
 
             ps.executeBatch();
             conn.commit();
-            return requestLogs;
 
         } catch (SQLException e) {
             logger.error("Track4j: Failed to save batch of request logs", e);
-            return Collections.emptyList();
         }
     }
 
@@ -101,13 +81,13 @@ public class SqlRequestLogRepository implements RequestLogRepositoryAdapter {
     public void close() {
         try {
             track4jDataSource.getConnection().close();
-        } catch (SQLException e){
+        } catch (SQLException e) {
             e.printStackTrace();
         }
     }
 
     private void setParameters(PreparedStatement ps, RequestLog log) throws SQLException {
-        ps.setString(1, log.getId());
+        ps.setString(1, UUID.randomUUID().toString());
         ps.setString(2, log.getTraceId());
         ps.setString(3, log.getSpanId());
         ps.setString(4, log.getParentSpanId());
@@ -128,6 +108,6 @@ public class SqlRequestLogRepository implements RequestLogRepositoryAdapter {
         ps.setString(19, log.getUserId());
         ps.setString(20, log.getClientIp());
         ps.setString(21, log.getTags());
-        ps.setTimestamp(22, Timestamp.valueOf(log.getCreatedAt()));
+        ps.setTimestamp(22, Timestamp.valueOf(LocalDateTime.now()));
     }
 }

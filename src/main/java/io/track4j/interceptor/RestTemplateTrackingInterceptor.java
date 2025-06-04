@@ -1,7 +1,10 @@
 package io.track4j.interceptor;
 
+import io.track4j.autoconfigure.Track4jServiceManager;
 import io.track4j.context.TraceContext;
-import io.track4j.dto.RequestLogDto;
+import io.track4j.entity.RequestLog;
+import io.track4j.entity.RequestType;
+import io.track4j.properties.Track4jProperties;
 import io.track4j.service.RequestLogService;
 import org.springframework.http.HttpRequest;
 import org.springframework.http.HttpStatus;
@@ -21,9 +24,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class RestTemplateTrackingInterceptor implements ClientHttpRequestInterceptor {
 
     private final RequestLogService requestLogService;
+    private final Track4jProperties properties;
 
     public RestTemplateTrackingInterceptor(RequestLogService requestLogService) {
         this.requestLogService = requestLogService;
+        this.properties = Track4jServiceManager.getInstance().getProperties();
     }
 
     @Override
@@ -45,23 +50,24 @@ public class RestTemplateTrackingInterceptor implements ClientHttpRequestInterce
 
         String url = request.getURI().toString();
         String method = request.getMethod().toString();
-        String requestHeaders = request.getHeaders().toString();
-        String requestBody = body.length > 0 ? new String(body, StandardCharsets.UTF_8) : null;
         LocalDateTime startTime = LocalDateTime.now();
 
-        RequestLogDto logDto = new RequestLogDto();
-        logDto.setTraceId(traceId);
-        logDto.setSpanId(spanId);
-        logDto.setParentSpanId(parentSpanId);
-        logDto.setOperationName("HTTP " + method + " " + extractHostFromUrl(url));
-        logDto.setRequestType(io.track4j.entity.RequestLog.RequestType.EXTERNAL);
-        logDto.setMethod(method);
-        logDto.setUrl(url);
-        logDto.setRequestHeaders(requestHeaders);
-        logDto.setRequestBody(requestBody);
-        logDto.setStartTime(startTime);
+        RequestLog requestLog = new RequestLog();
+        requestLog.setTraceId(traceId);
+        requestLog.setSpanId(spanId);
+        requestLog.setParentSpanId(parentSpanId);
+        requestLog.setOperationName("HTTP " + method + " " + extractHostFromUrl(url));
+        requestLog.setRequestType(RequestType.EXTERNAL);
+        requestLog.setMethod(method);
+        requestLog.setUrl(url);
+        if (properties.isIncludeHeaders()) {
+            requestLog.setRequestHeaders(request.getHeaders().toString());
+        }
+        if (properties.isIncludeRequestBody() && body.length > 0) {
+            requestLog.setRequestBody(new String(body, StandardCharsets.UTF_8));
+        }
 
-
+        requestLog.setStartTime(startTime);
 
         BufferingClientHttpResponse bufferingResponse = null;
         Exception caughtException = null;
@@ -73,13 +79,13 @@ public class RestTemplateTrackingInterceptor implements ClientHttpRequestInterce
             long durationMs = Duration.between(startTime, endTime).toMillis();
             int statusCode = bufferingResponse.getStatusCode().value();
 
-            logDto.setEndTime(endTime);
-            logDto.setDurationMs(durationMs);
-            logDto.setStatusCode(statusCode);
-            logDto.setResponseHeaders(bufferingResponse.getHeaders().toString());
-            logDto.setResponseBody(bufferingResponse.getBodyAsString());
-            logDto.setSuccess(bufferingResponse.getStatusCode().is2xxSuccessful());
-            logDto.setErrorMessage(null);
+            requestLog.setEndTime(endTime);
+            requestLog.setDurationMs(durationMs);
+            requestLog.setStatusCode(statusCode);
+            requestLog.setResponseHeaders(bufferingResponse.getHeaders().toString());
+            requestLog.setResponseBody(bufferingResponse.getBodyAsString());
+            requestLog.setSuccess(bufferingResponse.getStatusCode().is2xxSuccessful());
+            requestLog.setErrorMessage(null);
 
             return bufferingResponse;
 
@@ -89,17 +95,17 @@ public class RestTemplateTrackingInterceptor implements ClientHttpRequestInterce
             LocalDateTime endTime = LocalDateTime.now();
             long durationMs = Duration.between(startTime, endTime).toMillis();
 
-            logDto.setEndTime(endTime);
-            logDto.setDurationMs(durationMs);
-            logDto.setStatusCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
-            logDto.setResponseHeaders(null);
-            logDto.setResponseBody(null);
-            logDto.setSuccess(false);
-            logDto.setErrorMessage(e.getMessage());
+            requestLog.setEndTime(endTime);
+            requestLog.setDurationMs(durationMs);
+            requestLog.setStatusCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
+            requestLog.setResponseHeaders(null);
+            requestLog.setResponseBody(null);
+            requestLog.setSuccess(false);
+            requestLog.setErrorMessage(e.getMessage());
 
             return null;
         } finally {
-            requestLogService.logRequestAsync(logDto);
+            requestLogService.logRequestAsync(requestLog);
             if (bufferingResponse != null && caughtException != null) {
                 bufferingResponse.close();
             }
@@ -129,7 +135,7 @@ public class RestTemplateTrackingInterceptor implements ClientHttpRequestInterce
     private static class BufferingClientHttpResponse implements ClientHttpResponse {
         private final ClientHttpResponse response;
         private byte[] body;
-        private AtomicBoolean bodyCached = new AtomicBoolean(false);
+        private final AtomicBoolean bodyCached = new AtomicBoolean(false);
 
         public BufferingClientHttpResponse(ClientHttpResponse response) {
             this.response = response;

@@ -4,8 +4,8 @@ import io.track4j.autoconfigure.Track4jServiceManager;
 import io.track4j.context.TraceContext;
 import io.track4j.dto.LightweightRequestWrapper;
 import io.track4j.dto.LightweightResponseWrapper;
-import io.track4j.dto.RequestLogDto;
 import io.track4j.entity.RequestLog;
+import io.track4j.entity.RequestType;
 import io.track4j.helper.HttpStatusCode;
 import io.track4j.properties.Track4jProperties;
 import io.track4j.service.RequestLogService;
@@ -25,10 +25,10 @@ import java.time.LocalDateTime;
 
 public class IncomingRequestTrackingFilter implements Filter {
 
-    private final AntPathMatcher pathMatcher = new AntPathMatcher();
-    private final Track4jProperties track4jProperties = Track4jServiceManager.getInstance().getProperties();
-    private RequestLogService requestLogService;
-    private final SerializationService serializationService = Track4jServiceManager.getInstance().getSerializationService();
+    private static final AntPathMatcher pathMatcher = new AntPathMatcher();
+    private static final Track4jProperties track4jProperties = Track4jServiceManager.getInstance().getProperties();
+    private static final RequestLogService requestLogService = Track4jServiceManager.getInstance().getRequestLogService();
+    private static final SerializationService serializationService = Track4jServiceManager.getInstance().getSerializationService();
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
@@ -79,39 +79,39 @@ public class IncomingRequestTrackingFilter implements Filter {
             int statusCode = responseWrapper.getStatus();
             boolean isSuccess = success && statusCode < HttpStatusCode.HTTP_SERVER_INTERNAL_ERROR.getValue();
 
-            RequestLogDto dto = new RequestLogDto();
+            RequestLog requestLog = new RequestLog();
 
-            dto.setTraceId(traceId);
-            dto.setSpanId(spanId);
-            dto.setParentSpanId(parentSpanId);
-            dto.setOperationName(requestWrapper.getMethod() + " " + requestWrapper.getRequestURI());
-            dto.setRequestType(RequestLog.RequestType.INCOMING);
-            dto.setMethod(requestWrapper.getMethod());
-            dto.setUrl(requestWrapper.getRequestURL().toString());
-            dto.setStatusCode(statusCode);
-            dto.setStartTime(startTime);
-            dto.setEndTime(endTime);
-            dto.setDurationMs(durationMs);
-            dto.setSuccess(isSuccess);
-            dto.setErrorMessage(errorMessage);
-            dto.setUserId(serializationService.extractUserId(requestWrapper));
-            dto.setClientIp(serializationService.getClientIp(requestWrapper));
+            requestLog.setTraceId(traceId);
+            requestLog.setSpanId(spanId);
+            requestLog.setParentSpanId(parentSpanId);
+            requestLog.setOperationName(requestWrapper.getMethod() + " " + requestWrapper.getRequestURI());
+            requestLog.setRequestType(RequestType.INCOMING);
+            requestLog.setMethod(requestWrapper.getMethod());
+            requestLog.setUrl(requestWrapper.getRequestURL().toString());
+            requestLog.setStatusCode(statusCode);
+            requestLog.setStartTime(startTime);
+            requestLog.setEndTime(endTime);
+            requestLog.setDurationMs(durationMs);
+            requestLog.setSuccess(isSuccess);
+            requestLog.setErrorMessage(errorMessage);
+            requestLog.setUserId(serializationService.extractUserId(requestWrapper));
+            requestLog.setClientIp(serializationService.getClientIp(requestWrapper));
 
 
             if (track4jProperties == null || track4jProperties.isIncludeHeaders()) {
-                dto.setRequestHeaders(serializationService.getHeadersAsJson(requestWrapper));
-                dto.setResponseHeaders(serializationService.getHeadersAsJson(responseWrapper));
+                requestLog.setRequestHeaders(serializationService.getHeadersAsJson(requestWrapper));
+                requestLog.setResponseHeaders(serializationService.getHeadersAsJson(responseWrapper));
             }
 
             if (track4jProperties == null || track4jProperties.isIncludeRequestBody()) {
-                dto.setRequestBody(serializationService.getRequestBody(requestWrapper));
+                requestLog.setRequestBody(serializationService.getRequestBody(requestWrapper));
             }
 
             if (track4jProperties == null || track4jProperties.isIncludeResponseBody()) {
-                dto.setResponseBody(serializationService.getResponseBody(responseWrapper));
+                requestLog.setResponseBody(serializationService.getResponseBody(responseWrapper));
             }
 
-            getRequestLogService().logRequestAsync(dto);
+            requestLogService.logRequestAsync(requestLog);
 
             responseWrapper.copyBodyToResponse();
             TraceContext.clear();
@@ -130,12 +130,5 @@ public class IncomingRequestTrackingFilter implements Filter {
             }
         }
         return false;
-    }
-
-    private RequestLogService getRequestLogService() {
-        if (this.requestLogService == null) {
-            this.requestLogService = Track4jServiceManager.getInstance().getRequestLogService();
-        }
-        return this.requestLogService;
     }
 }

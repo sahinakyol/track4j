@@ -3,8 +3,9 @@ package io.track4j.aspect;
 import io.track4j.annotation.Track4j;
 import io.track4j.autoconfigure.Track4jServiceManager;
 import io.track4j.context.TraceContext;
-import io.track4j.dto.RequestLogDto;
 import io.track4j.dto.TrackingResult;
+import io.track4j.entity.RequestLog;
+import io.track4j.entity.RequestType;
 import io.track4j.helper.HttpStatusCode;
 import io.track4j.properties.Track4jProperties;
 import io.track4j.service.RequestLogService;
@@ -22,9 +23,9 @@ import java.time.LocalDateTime;
 
 @Aspect
 public class InternalServiceTrackingAspect {
-    private final Track4jProperties track4jProperties = Track4jServiceManager.getInstance().getProperties();
-    private final RequestLogService requestLogService = Track4jServiceManager.getInstance().getRequestLogService();
-    private final SerializationService serializationService = Track4jServiceManager.getInstance().getSerializationService();
+    private static final Track4jProperties track4jProperties = Track4jServiceManager.getInstance().getProperties();
+    private static final RequestLogService requestLogService = Track4jServiceManager.getInstance().getRequestLogService();
+    private static final SerializationService serializationService = Track4jServiceManager.getInstance().getSerializationService();
 
     @Around("@annotation(io.track4j.annotation.Track4j) || @within(io.track4j.annotation.Track4j)")
     public Object trackAnnotatedCalls(ProceedingJoinPoint pjp) throws Throwable {
@@ -57,19 +58,19 @@ public class InternalServiceTrackingAspect {
 
         LocalDateTime startTime = LocalDateTime.now();
 
-        RequestLogDto logDto = new RequestLogDto();
-        logDto.setTraceId(traceId);
-        logDto.setSpanId(spanId);
-        logDto.setParentSpanId(parentSpanId);
-        logDto.setOperationName(operationName);
-        logDto.setRequestType(io.track4j.entity.RequestLog.RequestType.INTERNAL);
-        logDto.setMethod(io.track4j.entity.RequestLog.RequestType.INTERNAL.getValue());
-        logDto.setUrl(className + "." + methodName);
-        logDto.setStartTime(startTime);
-        logDto.setTags(config.tags().length > 0 ? String.join(",", config.tags()) : null);
+        RequestLog requestLog = new RequestLog();
+        requestLog.setTraceId(traceId);
+        requestLog.setSpanId(spanId);
+        requestLog.setParentSpanId(parentSpanId);
+        requestLog.setOperationName(operationName);
+        requestLog.setRequestType(RequestType.INTERNAL);
+        requestLog.setMethod(RequestType.INTERNAL.getValue());
+        requestLog.setUrl(className + "." + methodName);
+        requestLog.setStartTime(startTime);
+        requestLog.setTags(config.tags().length > 0 ? String.join(",", config.tags()) : null);
 
         if (config.includeArgs()) {
-            logDto.setRequestBody(serializationService.serializeArgs(pjp.getArgs()));
+            requestLog.setRequestBody(serializationService.serializeArgs(pjp.getArgs()));
         }
 
         TrackingResult trackingResult = executeWithSpanContext(pjp, spanId, traceId);
@@ -78,16 +79,16 @@ public class InternalServiceTrackingAspect {
         long durationMs = Duration.between(startTime, endTime).toMillis();
 
         if (config.includeResult() && trackingResult.result != null) {
-            logDto.setResponseBody(serializationService.serializeResult(trackingResult.result));
+            requestLog.setResponseBody(serializationService.serializeResult(trackingResult.result));
         }
 
-        logDto.setEndTime(endTime);
-        logDto.setDurationMs(durationMs);
-        logDto.setStatusCode(HttpStatusCode.HTTP_SUCCESS.getValue());
-        logDto.setSuccess(trackingResult.exception == null);
-        logDto.setErrorMessage(trackingResult.exception != null ? trackingResult.exception.getMessage() : null);
+        requestLog.setEndTime(endTime);
+        requestLog.setDurationMs(durationMs);
+        requestLog.setStatusCode(HttpStatusCode.HTTP_SUCCESS.getValue());
+        requestLog.setSuccess(trackingResult.exception == null);
+        requestLog.setErrorMessage(trackingResult.exception != null ? trackingResult.exception.getMessage() : null);
 
-        requestLogService.logRequestAsync(logDto);
+        requestLogService.logRequestAsync(requestLog);
 
         if (trackingResult.exception != null) {
             return new Object();

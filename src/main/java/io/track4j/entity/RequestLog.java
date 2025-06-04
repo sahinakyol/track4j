@@ -1,9 +1,9 @@
 package io.track4j.entity;
 
+import java.lang.ref.SoftReference;
 import java.time.LocalDateTime;
 
 public class RequestLog {
-    private String id;
     private String traceId;
     private String spanId;
     private String parentSpanId;
@@ -11,10 +11,10 @@ public class RequestLog {
     private RequestType requestType;
     private String method;
     private String url;
-    private String requestHeaders;
-    private String requestBody;
-    private String responseHeaders;
-    private String responseBody;
+    private SoftReference<String> requestHeaders;
+    private SoftReference<String> requestBody;
+    private SoftReference<String> responseHeaders;
+    private SoftReference<String> responseBody;
     private Integer statusCode;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
@@ -24,26 +24,6 @@ public class RequestLog {
     private String userId;
     private String clientIp;
     private String tags;
-    private LocalDateTime createdAt;
-
-    public enum RequestType {
-        INCOMING("INCOMING"),
-        EXTERNAL("EXTERNAL"),
-        INTERNAL("INTERNAL");
-
-        private final String value;
-
-        RequestType(String value) {
-            this.value = value;
-        }
-
-        public String getValue() {
-            return this.value;
-        }
-    }
-
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
 
     public String getTraceId() { return traceId; }
     public void setTraceId(String traceId) { this.traceId = traceId; }
@@ -66,17 +46,37 @@ public class RequestLog {
     public String getUrl() { return url; }
     public void setUrl(String url) { this.url = url; }
 
-    public String getRequestHeaders() { return requestHeaders; }
-    public void setRequestHeaders(String requestHeaders) { this.requestHeaders = requestHeaders; }
+    public String getRequestHeaders() {
+        return requestHeaders != null ? requestHeaders.get() : null;
+    }
 
-    public String getRequestBody() { return requestBody; }
-    public void setRequestBody(String requestBody) { this.requestBody = requestBody; }
+    public void setRequestHeaders(String headers) {
+        this.requestHeaders = headers != null ? new SoftReference<>(headers) : null;
+    }
 
-    public String getResponseHeaders() { return responseHeaders; }
-    public void setResponseHeaders(String responseHeaders) { this.responseHeaders = responseHeaders; }
+    public String getRequestBody() {
+        return requestBody != null ? requestBody.get() : null;
+    }
 
-    public String getResponseBody() { return responseBody; }
-    public void setResponseBody(String responseBody) { this.responseBody = responseBody; }
+    public void setRequestBody(String body) {
+        this.requestBody = body != null ? new SoftReference<>(body) : null;
+    }
+
+    public String getResponseHeaders() {
+        return responseHeaders != null ? responseHeaders.get() : null;
+    }
+
+    public void setResponseHeaders(String headers) {
+        this.responseHeaders = headers != null ? new SoftReference<>(headers) : null;
+    }
+
+    public String getResponseBody() {
+        return responseBody != null ? responseBody.get() : null;
+    }
+
+    public void setResponseBody(String body) {
+        this.responseBody = body != null ? new SoftReference<>(body) : null;
+    }
 
     public Integer getStatusCode() { return statusCode; }
     public void setStatusCode(Integer statusCode) { this.statusCode = statusCode; }
@@ -104,7 +104,4 @@ public class RequestLog {
 
     public String getTags() { return tags; }
     public void setTags(String tags) { this.tags = tags; }
-
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }

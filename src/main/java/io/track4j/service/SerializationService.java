@@ -14,14 +14,12 @@ import java.util.Iterator;
 
 public final class SerializationService {
 
-    private final ObjectMapper track4jObjectMapper;
-    private final HttpHeaders sensitiveHttpHeaders;
+    private static final ObjectMapper track4jObjectMapper = track4jObjectMapper();
     private final HttpHeaders ipHttpHeaders;
     private static final String STRING_EMPTY_ARRAY = "[]";
     private static final String STRING_ERROR_ARRAY = "[Error: %s]";
     private static final String STRING_NULL = "null";
     private static final String STRING_ERROR_JSON = "{error: %s}";
-    private static final String STRING_MASK = "******";
     private static final String UNKNOWN = "unknown";
     private static final String X_USER_ID_HEADER_NAME = "X-User-ID";
     private static final String START_BRACKET = "{";
@@ -31,13 +29,6 @@ public final class SerializationService {
     private static final String COMMA = ",";
 
     public SerializationService() {
-        this.track4jObjectMapper = track4jObjectMapper();
-        this.sensitiveHttpHeaders = new HttpHeaders();
-        sensitiveHttpHeaders.addHeader(new HttpHeader("authorization"));
-        sensitiveHttpHeaders.addHeader(new HttpHeader("cookie"));
-        sensitiveHttpHeaders.addHeader(new HttpHeader("x-api-key"));
-        sensitiveHttpHeaders.addHeader(new HttpHeader("x-auth-token"));
-
         this.ipHttpHeaders = new HttpHeaders();
         ipHttpHeaders.addHeader(new HttpHeader("X-Forwarded-For"));
         ipHttpHeaders.addHeader(new HttpHeader("X-Real-IP"));
@@ -77,13 +68,12 @@ public final class SerializationService {
 
         while (headerNames.asIterator().hasNext()) {
             String name = headerNames.nextElement();
-            String value = maskSensitiveHeader(name, request.getHeader(name));
             json.append(QUOTE)
                     .append(name)
                     .append(QUOTE)
                     .append(COLON)
                     .append(QUOTE)
-                    .append(value)
+                    .append(request.getHeader(name))
                     .append(QUOTE);
             if (headerNames.asIterator().hasNext()) {
                 json.append(COMMA);
@@ -100,13 +90,12 @@ public final class SerializationService {
 
         while (it.hasNext()) {
             String name = it.next();
-            String value = maskSensitiveHeader(name, response.getHeader(name));
             json.append(QUOTE)
                     .append(name)
                     .append(QUOTE)
                     .append(COLON)
                     .append(QUOTE)
-                    .append(value)
+                    .append(response.getHeader(name))
                     .append(QUOTE);
             if (it.hasNext()) {
                 json.append(COMMA);
@@ -115,14 +104,6 @@ public final class SerializationService {
 
         json.append(END_BRACKET);
         return json.toString();
-    }
-
-    private String maskSensitiveHeader(String name, String value) {
-        if (value == null) return "";
-        if (sensitiveHttpHeaders.contains(new HttpHeader(name.toLowerCase()))) {
-            return STRING_MASK;
-        }
-        return value;
     }
 
     public String getRequestBody(LightweightRequestWrapper request) {
