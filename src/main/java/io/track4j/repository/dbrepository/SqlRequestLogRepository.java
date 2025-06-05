@@ -92,7 +92,7 @@ public class SqlRequestLogRepository implements RequestLogRepositoryAdapter {
         ps.setString(3, log.getSpanId());
         ps.setString(4, log.getParentSpanId());
         ps.setString(5, log.getOperationName());
-        ps.setString(6, log.getRequestType() != null ? log.getRequestType().name() : null);
+        ps.setString(6, log.getRequestType() != null ? log.getRequestType().getValue() : null);
         ps.setString(7, log.getMethod());
         ps.setString(8, log.getUrl());
         ps.setString(9, log.getRequestHeaders());

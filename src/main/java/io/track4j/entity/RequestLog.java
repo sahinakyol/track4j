@@ -1,9 +1,20 @@
 package io.track4j.entity;
 
-import java.lang.ref.SoftReference;
 import java.time.LocalDateTime;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 public class RequestLog {
+
+    private static final ConcurrentMap<String, String> METHOD_CACHE = new ConcurrentHashMap<>();
+    private static final String[] COMMON_METHODS = {"GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"};
+
+    static {
+        for (String method : COMMON_METHODS) {
+            METHOD_CACHE.put(method, method.intern());
+        }
+    }
+
     private String traceId;
     private String spanId;
     private String parentSpanId;
@@ -11,10 +22,10 @@ public class RequestLog {
     private RequestType requestType;
     private String method;
     private String url;
-    private SoftReference<String> requestHeaders;
-    private SoftReference<String> requestBody;
-    private SoftReference<String> responseHeaders;
-    private SoftReference<String> responseBody;
+    private String requestHeaders;
+    private String requestBody;
+    private String responseHeaders;
+    private String responseBody;
     private Integer statusCode;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
@@ -25,83 +36,167 @@ public class RequestLog {
     private String clientIp;
     private String tags;
 
-    public String getTraceId() { return traceId; }
-    public void setTraceId(String traceId) { this.traceId = traceId; }
+    public String getTraceId() {
+        return traceId;
+    }
 
-    public String getSpanId() { return spanId; }
-    public void setSpanId(String spanId) { this.spanId = spanId; }
+    public void setTraceId(String traceId) {
+        this.traceId = traceId;
+    }
 
-    public String getParentSpanId() { return parentSpanId; }
-    public void setParentSpanId(String parentSpanId) { this.parentSpanId = parentSpanId; }
+    public String getSpanId() {
+        return spanId;
+    }
 
-    public String getOperationName() { return operationName; }
-    public void setOperationName(String operationName) { this.operationName = operationName; }
+    public void setSpanId(String spanId) {
+        this.spanId = spanId;
+    }
 
-    public RequestType getRequestType() { return requestType; }
-    public void setRequestType(RequestType requestType) { this.requestType = requestType; }
+    public String getParentSpanId() {
+        return parentSpanId;
+    }
 
-    public String getMethod() { return method; }
-    public void setMethod(String method) { this.method = method; }
+    public void setParentSpanId(String parentSpanId) {
+        this.parentSpanId = parentSpanId;
+    }
 
-    public String getUrl() { return url; }
-    public void setUrl(String url) { this.url = url; }
+    public String getOperationName() {
+        return operationName;
+    }
+
+    public void setOperationName(String operationName) {
+        this.operationName = operationName;
+    }
+
+    public RequestType getRequestType() {
+        return requestType;
+    }
+
+    public void setRequestType(RequestType requestType) {
+        this.requestType = requestType;
+    }
+
+    public String getMethod() {
+        return method;
+    }
+
+    public void setMethod(String method) {
+        if (method != null && METHOD_CACHE.containsKey(method)) {
+            this.method = METHOD_CACHE.get(method);
+        } else {
+            this.method = method;
+        }
+    }
+
+    public String getUrl() {
+        return url;
+    }
+
+    public void setUrl(String url) {
+        this.url = url;
+    }
 
     public String getRequestHeaders() {
-        return requestHeaders != null ? requestHeaders.get() : null;
+        return this.requestHeaders;
     }
 
     public void setRequestHeaders(String headers) {
-        this.requestHeaders = headers != null ? new SoftReference<>(headers) : null;
+        this.requestHeaders = headers;
     }
 
     public String getRequestBody() {
-        return requestBody != null ? requestBody.get() : null;
+        return this.requestBody;
     }
 
     public void setRequestBody(String body) {
-        this.requestBody = body != null ? new SoftReference<>(body) : null;
+        this.requestBody = body;
     }
 
     public String getResponseHeaders() {
-        return responseHeaders != null ? responseHeaders.get() : null;
+        return this.responseHeaders;
     }
 
     public void setResponseHeaders(String headers) {
-        this.responseHeaders = headers != null ? new SoftReference<>(headers) : null;
+        this.responseHeaders = headers;
     }
 
     public String getResponseBody() {
-        return responseBody != null ? responseBody.get() : null;
+        return this.responseBody;
     }
 
     public void setResponseBody(String body) {
-        this.responseBody = body != null ? new SoftReference<>(body) : null;
+        this.responseBody = body;
     }
 
-    public Integer getStatusCode() { return statusCode; }
-    public void setStatusCode(Integer statusCode) { this.statusCode = statusCode; }
+    public Integer getStatusCode() {
+        return statusCode;
+    }
 
-    public LocalDateTime getStartTime() { return startTime; }
-    public void setStartTime(LocalDateTime startTime) { this.startTime = startTime; }
+    public void setStatusCode(Integer statusCode) {
+        this.statusCode = statusCode;
+    }
 
-    public LocalDateTime getEndTime() { return endTime; }
-    public void setEndTime(LocalDateTime endTime) { this.endTime = endTime; }
+    public LocalDateTime getStartTime() {
+        return startTime;
+    }
 
-    public Long getDurationMs() { return durationMs; }
-    public void setDurationMs(Long durationMs) { this.durationMs = durationMs; }
+    public void setStartTime(LocalDateTime startTime) {
+        this.startTime = startTime;
+    }
 
-    public Boolean getSuccess() { return success; }
-    public void setSuccess(Boolean success) { this.success = success; }
+    public LocalDateTime getEndTime() {
+        return endTime;
+    }
 
-    public String getErrorMessage() { return errorMessage; }
-    public void setErrorMessage(String errorMessage) { this.errorMessage = errorMessage; }
+    public void setEndTime(LocalDateTime endTime) {
+        this.endTime = endTime;
+    }
 
-    public String getUserId() { return userId; }
-    public void setUserId(String userId) { this.userId = userId; }
+    public Long getDurationMs() {
+        return durationMs;
+    }
 
-    public String getClientIp() { return clientIp; }
-    public void setClientIp(String clientIp) { this.clientIp = clientIp; }
+    public void setDurationMs(Long durationMs) {
+        this.durationMs = durationMs;
+    }
 
-    public String getTags() { return tags; }
-    public void setTags(String tags) { this.tags = tags; }
+    public Boolean getSuccess() {
+        return success;
+    }
+
+    public void setSuccess(Boolean success) {
+        this.success = success;
+    }
+
+    public String getErrorMessage() {
+        return errorMessage;
+    }
+
+    public void setErrorMessage(String errorMessage) {
+        this.errorMessage = errorMessage;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
+
+    public String getClientIp() {
+        return clientIp;
+    }
+
+    public void setClientIp(String clientIp) {
+        this.clientIp = clientIp;
+    }
+
+    public String getTags() {
+        return tags;
+    }
+
+    public void setTags(String tags) {
+        this.tags = tags;
+    }
 }

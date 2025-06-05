@@ -9,7 +9,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.util.StringUtils;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Enumeration;
 import java.util.Iterator;
 
 public final class SerializationService {
@@ -27,6 +26,7 @@ public final class SerializationService {
     private static final String QUOTE = "\"";
     private static final String COLON = ":";
     private static final String COMMA = ",";
+    private static final ThreadLocal<StringBuilder> stringBuilder = ThreadLocal.withInitial(StringBuilder::new);
 
     public SerializationService() {
         this.ipHttpHeaders = new HttpHeaders();
@@ -63,11 +63,13 @@ public final class SerializationService {
     }
 
     public String getHeadersAsJson(LightweightRequestWrapper request) {
-        StringBuilder json = new StringBuilder(START_BRACKET);
-        Enumeration<String> headerNames = request.getHeaderNames();
+        StringBuilder json = stringBuilder.get();
+        json.setLength(0);
+        json.append(START_BRACKET);
+        Iterator<String> headerNames = request.getHeaderNames().asIterator();
 
-        while (headerNames.asIterator().hasNext()) {
-            String name = headerNames.nextElement();
+        while (headerNames.hasNext()) {
+            String name = headerNames.next();
             json.append(QUOTE)
                     .append(name)
                     .append(QUOTE)
@@ -75,7 +77,7 @@ public final class SerializationService {
                     .append(QUOTE)
                     .append(request.getHeader(name))
                     .append(QUOTE);
-            if (headerNames.asIterator().hasNext()) {
+            if (headerNames.hasNext()) {
                 json.append(COMMA);
             }
         }
@@ -85,7 +87,9 @@ public final class SerializationService {
     }
 
     public String getHeadersAsJson(LightweightResponseWrapper response) {
-        StringBuilder json = new StringBuilder(START_BRACKET);
+        StringBuilder json = stringBuilder.get();
+        json.setLength(0);
+        json.append(START_BRACKET);
         Iterator<String> it = response.getHeaderNames().iterator();
 
         while (it.hasNext()) {

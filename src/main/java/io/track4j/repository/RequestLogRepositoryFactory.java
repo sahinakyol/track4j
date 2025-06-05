@@ -10,8 +10,8 @@ import javax.sql.DataSource;
 
 public class RequestLogRepositoryFactory {
 
-    private RequestLogRepositoryAdapter adapter;
-    private final Track4jProperties track4jProperties = Track4jServiceManager.getInstance().getProperties();
+    private static RequestLogRepositoryAdapter adapter;
+    private static final Track4jProperties track4jProperties = Track4jServiceManager.getInstance().getProperties();
 
     public RequestLogRepositoryFactory() {
         init();

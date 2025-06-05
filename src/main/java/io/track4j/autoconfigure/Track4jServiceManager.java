@@ -11,10 +11,10 @@ public final class Track4jServiceManager {
 
     private static Track4jServiceManager instance;
 
-    private Track4jProperties properties;
-    private RequestLogService requestLogService;
-    private RestTemplateTrackingInterceptor restTemplateTrackingInterceptor;
-    private SerializationService serializationService;
+    private static Track4jProperties properties;
+    private static RequestLogService requestLogService;
+    private static RestTemplateTrackingInterceptor restTemplateTrackingInterceptor;
+    private static SerializationService serializationService;
 
     private Track4jServiceManager() {
     }
@@ -41,17 +41,17 @@ public final class Track4jServiceManager {
     }
 
     private void startup() {
-        this.properties = new Track4jProperties();
+        properties = new Track4jProperties();
 
         if (!properties.isEnabled()) {
             return;
         }
 
         RequestLogRepositoryAdapter requestLogRepositoryAdapter = new RequestLogRepositoryFactory().getAdapter();
-        this.serializationService = new SerializationService();
+        serializationService = new SerializationService();
 
-        this.requestLogService = new RequestLogService(requestLogRepositoryAdapter, properties);
-        this.restTemplateTrackingInterceptor = new RestTemplateTrackingInterceptor(requestLogService);
+        requestLogService = new RequestLogService(requestLogRepositoryAdapter, properties);
+        restTemplateTrackingInterceptor = new RestTemplateTrackingInterceptor(requestLogService);
     }
 
     private void stop() {
@@ -61,11 +61,11 @@ public final class Track4jServiceManager {
     }
 
     public Track4jProperties getProperties() {
-        return this.properties;
+        return properties;
     }
 
     public RequestLogService getRequestLogService() {
-        return this.requestLogService;
+        return requestLogService;
     }
 
     public RestTemplateTrackingInterceptor getRestTemplateTrackingInterceptor() {

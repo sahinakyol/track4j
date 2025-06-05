@@ -25,6 +25,7 @@ public class RequestLogService {
     private final BlockingQueue<RequestLog> rescueBuffer;
     private final ScheduledExecutorService scheduler;
     private final ExecutorService worker;
+    private final ThreadLocal<List<RequestLog>> requestLogsListPool;
 
     public RequestLogService(RequestLogRepositoryAdapter adapter, Track4jProperties track4jProperties) {
         this.track4jProperties = track4jProperties;
@@ -33,7 +34,7 @@ public class RequestLogService {
         this.rescueBuffer = new ArrayBlockingQueue<>(track4jProperties.getBatchSize());
         this.scheduler = Executors.newScheduledThreadPool(1);
         this.worker = Executors.newFixedThreadPool(2);
-
+        this.requestLogsListPool = ThreadLocal.withInitial(() -> new ArrayList<>(track4jProperties.getBatchSize()));
         repository.initialize();
         scheduler.scheduleWithFixedDelay(
                 this::processBuffer,
@@ -85,11 +86,12 @@ public class RequestLogService {
     }
 
     private void processBuffer() {
-        List<RequestLog> batch = new ArrayList<>(logBuffer.size());
-        logBuffer.drainTo(batch, track4jProperties.getBatchSize());
+        List<RequestLog> requestLogs = requestLogsListPool.get();
+        requestLogs.clear();
+        logBuffer.drainTo(requestLogs, track4jProperties.getBatchSize());
 
-        if (!batch.isEmpty()) {
-            processBatch(batch);
+        if (!requestLogs.isEmpty()) {
+            processBatch(requestLogs);
         }
     }
 
@@ -98,11 +100,12 @@ public class RequestLogService {
             return;
         }
 
-        List<RequestLog> batch = new ArrayList<>(rescueBuffer.size());
-        rescueBuffer.drainTo(batch, track4jProperties.getBatchSize());
+        List<RequestLog> requestLogs = requestLogsListPool.get();
+        requestLogs.clear();
+        rescueBuffer.drainTo(requestLogs, track4jProperties.getBatchSize());
 
-        if (!batch.isEmpty()) {
-            processBatch(batch);
+        if (!requestLogs.isEmpty()) {
+            processBatch(requestLogs);
         }
     }
 
