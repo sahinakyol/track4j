@@ -1,4 +1,4 @@
-package io.track4j.service;
+package io.track4j.helper;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -12,10 +12,6 @@ public class HttpHeaders implements Iterable<HttpHeader>{
 
     public void addHeader(HttpHeader httpHeader) {
         this.headers.add(httpHeader);
-    }
-
-    public boolean contains(HttpHeader httpHeader) {
-        return this.headers.contains(httpHeader);
     }
 
     @Override

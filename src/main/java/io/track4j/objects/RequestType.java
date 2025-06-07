@@ -1,4 +1,4 @@
-package io.track4j.entity;
+package io.track4j.objects;
 
 public enum RequestType {
     INCOMING("INCOMING"),

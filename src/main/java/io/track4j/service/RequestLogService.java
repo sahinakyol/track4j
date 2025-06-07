@@ -1,6 +1,6 @@
 package io.track4j.service;
 
-import io.track4j.entity.RequestLog;
+import io.track4j.objects.RequestLog;
 import io.track4j.properties.Track4jProperties;
 import io.track4j.repository.RequestLogRepositoryAdapter;
 import org.slf4j.Logger;
@@ -66,7 +66,6 @@ public class RequestLogService {
                 RequestLog oldLog = logBuffer.poll();
                 if (oldLog != null) {
                     rescueBuffer.put(oldLog);
-                    logger.warn("Track4j: Request log buffer is full, rescued log");
                 }
                 logBuffer.put(requestLog);
             }
@@ -115,8 +114,15 @@ public class RequestLogService {
         } catch (Exception e) {
             logger.error("Track4j: Failed to save request logs", e);
         } finally {
-            logs.clear();
+            clearList(logs);
         }
+    }
+
+    private void clearList(List<RequestLog> list) {
+        for (int i = 0; i < list.size(); i++) {
+            list.set(i, null);
+        }
+        list.clear();
     }
 
     private void flushRemainingLogs() {

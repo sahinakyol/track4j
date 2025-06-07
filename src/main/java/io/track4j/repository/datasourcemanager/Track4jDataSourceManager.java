@@ -1,4 +1,4 @@
-package io.track4j.data;
+package io.track4j.repository.datasourcemanager;
 
 import com.zaxxer.hikari.HikariDataSource;
 import io.track4j.autoconfigure.Track4jServiceManager;

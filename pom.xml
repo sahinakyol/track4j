@@ -6,7 +6,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>io.track4j</groupId>
     <artifactId>track4j</artifactId>
-    <version>0.1.4</version>
+    <version>0.1.5</version>
     <packaging>jar</packaging>
     <name>track4j</name>
     <url>https://maven.apache.org</url>

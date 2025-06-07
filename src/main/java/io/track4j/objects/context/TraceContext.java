@@ -1,4 +1,4 @@
-package io.track4j.context;
+package io.track4j.objects.context;
 
 import org.slf4j.MDC;
 
@@ -60,7 +60,6 @@ public final class TraceContext {
             this.spanId = spanId;
         }
     }
-
 
     public static void setTraceData(String traceId, String spanId) {
         TraceData data = CONTEXT.get();

@@ -30,9 +30,9 @@ public class Track4jProperties {
 
     private int maximumPoolSize = 5;
     private int minimumIdle = 1;
-    private int connectionTimeout = 30000;
-    private int idleTimeout = 600000;
-    private int maxLifetime = 1800000;
+    private long connectionTimeout = 30000;
+    private long idleTimeout = 600000;
+    private long maxLifetime = 1800000;
     private boolean autoCommit = false;
     private String poolName = "Track4jPool";
 
@@ -56,9 +56,9 @@ public class Track4jProperties {
 
             this.maximumPoolSize = Integer.parseInt(properties.getProperty("track4j.hikari.maximum-pool-size"));
             this.minimumIdle = Integer.parseInt(properties.getProperty("track4j.hikari.minimum-idle"));
-            this.connectionTimeout = Integer.parseInt(properties.getProperty("track4j.hikari.connection-timeout"));
-            this.idleTimeout = Integer.parseInt(properties.getProperty("track4j.hikari.idle-timeout"));
-            this.maxLifetime = Integer.parseInt(properties.getProperty("track4j.hikari.max-lifetime"));
+            this.connectionTimeout = Long.parseLong(properties.getProperty("track4j.hikari.connection-timeout"));
+            this.idleTimeout = Long.parseLong(properties.getProperty("track4j.hikari.idle-timeout"));
+            this.maxLifetime = Long.parseLong(properties.getProperty("track4j.hikari.max-lifetime"));
             this.autoCommit = Boolean.parseBoolean(properties.getProperty("track4j.hikari.auto-commit"));
             this.poolName = properties.getProperty("track4j.hikari.pool-name");
 
@@ -109,15 +109,15 @@ public class Track4jProperties {
         return minimumIdle;
     }
 
-    public int getConnectionTimeout() {
+    public long getConnectionTimeout() {
         return connectionTimeout;
     }
 
-    public int getIdleTimeout() {
+    public long getIdleTimeout() {
         return idleTimeout;
     }
 
-    public int getMaxLifetime() {
+    public long getMaxLifetime() {
         return maxLifetime;
     }
 

@@ -1,6 +1,6 @@
 package io.track4j.repository.dbrepository;
 
-import io.track4j.entity.RequestLog;
+import io.track4j.objects.RequestLog;
 import io.track4j.repository.RequestLogRepositoryAdapter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,9 +32,7 @@ public class SqlRequestLogRepository implements RequestLogRepositoryAdapter {
     @Override
     public void initialize() {
         try (Connection conn = track4jDataSource.getConnection()) {
-
             String dbProductName = conn.getMetaData().getDatabaseProductName().toLowerCase();
-
             logger.info("Track4j: Initialized SQL request_logs table {}", dbProductName);
         } catch (SQLException e) {
             logger.error("Track4j: Failed to initialize database", e);
@@ -47,7 +45,6 @@ public class SqlRequestLogRepository implements RequestLogRepositoryAdapter {
              PreparedStatement ps = conn.prepareStatement(INSERT_SQL)) {
             setParameters(ps, requestLog);
             ps.executeUpdate();
-
         } catch (SQLException e) {
             logger.error("Track4j: Failed to save request log", e);
         }
@@ -58,11 +55,15 @@ public class SqlRequestLogRepository implements RequestLogRepositoryAdapter {
         if (requestLogs.isEmpty()) {
             return;
         }
+        Connection conn = null;
+        PreparedStatement ps = null;
 
-        try (Connection conn = track4jDataSource.getConnection();
-             PreparedStatement ps = conn.prepareStatement(INSERT_SQL)) {
+        try {
 
+            conn = track4jDataSource.getConnection();
             conn.setAutoCommit(false);
+
+            ps = conn.prepareStatement(INSERT_SQL);
 
             for (RequestLog log : requestLogs) {
                 setParameters(ps, log);
@@ -74,6 +75,35 @@ public class SqlRequestLogRepository implements RequestLogRepositoryAdapter {
 
         } catch (SQLException e) {
             logger.error("Track4j: Failed to save batch of request logs", e);
+            if (conn != null) {
+                try {
+                    conn.rollback();
+                } catch (SQLException rollbackEx) {
+                    logger.error("Track4j: Failed to rollback transaction", rollbackEx);
+                }
+            }
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.setAutoCommit(false);
+                } catch (SQLException e) {
+                    logger.error("Track4j: Failed to restore autoCommit", e);
+                }
+            }
+            if (ps != null) {
+                try {
+                    ps.close();
+                } catch (SQLException e) {
+                    logger.error("Track4j: Failed to close PreparedStatement", e);
+                }
+            }
+            if (conn != null) {
+                try {
+                    conn.close();
+                } catch (SQLException e) {
+                    logger.error("Track4j: Failed to close Connection", e);
+                }
+            }
         }
     }
 

@@ -5,13 +5,13 @@ public enum HttpStatusCode {
     HTTP_SERVER_INTERNAL_ERROR(500),
     HTTP_REDIRECT(300);
 
-    private final Integer value;
+    private final int value;
 
-    HttpStatusCode(Integer value) {
+    HttpStatusCode(int value) {
         this.value = value;
     }
 
-    public Integer getValue() {
+    public int getValue() {
         return this.value;
     }
 }

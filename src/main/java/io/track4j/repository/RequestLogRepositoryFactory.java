@@ -1,7 +1,6 @@
 package io.track4j.repository;
 
-import io.track4j.autoconfigure.Track4jServiceManager;
-import io.track4j.data.Track4jDataSourceManager;
+import io.track4j.repository.datasourcemanager.Track4jDataSourceManager;
 import io.track4j.properties.StorageType;
 import io.track4j.properties.Track4jProperties;
 import io.track4j.repository.dbrepository.SqlRequestLogRepository;
@@ -10,14 +9,9 @@ import javax.sql.DataSource;
 
 public class RequestLogRepositoryFactory {
 
-    private static RequestLogRepositoryAdapter adapter;
-    private static final Track4jProperties track4jProperties = Track4jServiceManager.getInstance().getProperties();
+    private RequestLogRepositoryAdapter adapter;
 
-    public RequestLogRepositoryFactory() {
-        init();
-    }
-
-    public void init() {
+    public RequestLogRepositoryFactory(Track4jProperties track4jProperties) {
         DataSource track4jDataSource = new Track4jDataSourceManager().getDataSource();
         StorageType storageType = track4jProperties.getStorageType();
 
@@ -26,7 +20,7 @@ public class RequestLogRepositoryFactory {
                 if (track4jDataSource == null) {
                     throw new IllegalStateException("DataSource is required for SQL storage");
                 }
-                adapter = new SqlRequestLogRepository(track4jDataSource);
+                setAdapter(new SqlRequestLogRepository(track4jDataSource));
                 break;
             case CUSTOM:
                 String customClass = track4jProperties.getCustomRepositoryClass();
@@ -35,7 +29,7 @@ public class RequestLogRepositoryFactory {
                 }
                 try {
                     Class<?> clazz = Class.forName(customClass);
-                    adapter = (RequestLogRepositoryAdapter) clazz.getDeclaredConstructor().newInstance();
+                    setAdapter((RequestLogRepositoryAdapter) clazz.getDeclaredConstructor().newInstance());
                     break;
                 } catch (Exception e) {
                     throw new IllegalStateException("Failed to instantiate custom repository: " + customClass, e);
@@ -46,11 +40,10 @@ public class RequestLogRepositoryFactory {
     }
 
     public RequestLogRepositoryAdapter getAdapter() {
-        if (adapter == null) {
-            synchronized (this) {
-                init();
-            }
-        }
         return this.adapter;
+    }
+
+    private void setAdapter(RequestLogRepositoryAdapter adapter) {
+        this.adapter = adapter;
     }
 }

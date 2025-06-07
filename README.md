@@ -44,13 +44,13 @@
 <dependency>
     <groupId>io.track4j</groupId>
     <artifactId>track4j</artifactId>
-    <version>0.1.4</version>
+    <version>0.1.5</version>
 </dependency>
 ```
 
 #### Gradle
 ```groovy
-implementation 'io.track4j:track4j:0.1.4'
+implementation 'io.track4j:track4j:0.1.5'
 ```
 
 ### 2. Configuration

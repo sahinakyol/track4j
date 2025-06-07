@@ -1,4 +1,4 @@
-package io.track4j.dto;
+package io.track4j.objects;
 
 public class TrackingResult {
     public final Object result;

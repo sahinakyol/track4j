@@ -1,7 +1,7 @@
 package io.track4j.beans;
 
 import io.track4j.autoconfigure.Track4jServiceManager;
-import io.track4j.interceptor.RestTemplateTrackingInterceptor;
+import io.track4j.trackers.RestTemplateTrackingInterceptor;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.http.client.ClientHttpRequestInterceptor;

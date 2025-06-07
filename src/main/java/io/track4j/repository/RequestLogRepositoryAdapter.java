@@ -1,6 +1,6 @@
 package io.track4j.repository;
 
-import io.track4j.entity.RequestLog;
+import io.track4j.objects.RequestLog;
 
 import java.util.List;
 

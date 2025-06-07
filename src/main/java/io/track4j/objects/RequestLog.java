@@ -1,4 +1,4 @@
-package io.track4j.entity;
+package io.track4j.objects;
 
 import java.time.LocalDateTime;
 import java.util.concurrent.ConcurrentHashMap;
@@ -26,11 +26,11 @@ public class RequestLog {
     private String requestBody;
     private String responseHeaders;
     private String responseBody;
-    private Integer statusCode;
+    private int statusCode;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
-    private Long durationMs;
-    private Boolean success;
+    private long durationMs;
+    private boolean success;
     private String errorMessage;
     private String userId;
     private String clientIp;
@@ -128,11 +128,11 @@ public class RequestLog {
         this.responseBody = body;
     }
 
-    public Integer getStatusCode() {
+    public int getStatusCode() {
         return statusCode;
     }
 
-    public void setStatusCode(Integer statusCode) {
+    public void setStatusCode(int statusCode) {
         this.statusCode = statusCode;
     }
 
@@ -152,19 +152,19 @@ public class RequestLog {
         this.endTime = endTime;
     }
 
-    public Long getDurationMs() {
+    public long getDurationMs() {
         return durationMs;
     }
 
-    public void setDurationMs(Long durationMs) {
+    public void setDurationMs(long durationMs) {
         this.durationMs = durationMs;
     }
 
-    public Boolean getSuccess() {
+    public boolean getSuccess() {
         return success;
     }
 
-    public void setSuccess(Boolean success) {
+    public void setSuccess(boolean success) {
         this.success = success;
     }
 

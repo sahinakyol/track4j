@@ -1,10 +1,10 @@
-package io.track4j.service;
+package io.track4j.helper;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import io.track4j.dto.LightweightRequestWrapper;
-import io.track4j.dto.LightweightResponseWrapper;
+import io.track4j.objects.LightweightRequestWrapper;
+import io.track4j.objects.LightweightResponseWrapper;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.util.StringUtils;
 

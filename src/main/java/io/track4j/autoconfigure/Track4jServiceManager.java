@@ -1,20 +1,20 @@
 package io.track4j.autoconfigure;
 
-import io.track4j.interceptor.RestTemplateTrackingInterceptor;
+import io.track4j.trackers.RestTemplateTrackingInterceptor;
 import io.track4j.properties.Track4jProperties;
 import io.track4j.repository.RequestLogRepositoryAdapter;
 import io.track4j.repository.RequestLogRepositoryFactory;
 import io.track4j.service.RequestLogService;
-import io.track4j.service.SerializationService;
+import io.track4j.helper.SerializationService;
 
 public final class Track4jServiceManager {
 
     private static Track4jServiceManager instance;
 
-    private static Track4jProperties properties;
-    private static RequestLogService requestLogService;
-    private static RestTemplateTrackingInterceptor restTemplateTrackingInterceptor;
-    private static SerializationService serializationService;
+    private Track4jProperties properties;
+    private RequestLogService requestLogService;
+    private RestTemplateTrackingInterceptor restTemplateTrackingInterceptor;
+    private SerializationService serializationService;
 
     private Track4jServiceManager() {
     }
@@ -47,7 +47,7 @@ public final class Track4jServiceManager {
             return;
         }
 
-        RequestLogRepositoryAdapter requestLogRepositoryAdapter = new RequestLogRepositoryFactory().getAdapter();
+        RequestLogRepositoryAdapter requestLogRepositoryAdapter = new RequestLogRepositoryFactory(properties).getAdapter();
         serializationService = new SerializationService();
 
         requestLogService = new RequestLogService(requestLogRepositoryAdapter, properties);
